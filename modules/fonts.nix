@@ -16,9 +16,19 @@
 
     # 各字体族的默认优先级：西文在前，中文回退到思源黑体/宋体。
     fontconfig.defaultFonts = {
-      sansSerif = [ "Noto Sans" "Noto Sans CJK SC" "WenQuanYi Micro Hei" ];
-      serif = [ "Noto Serif" "Noto Serif CJK SC" ];
-      monospace = [ "DejaVu Sans Mono" "Noto Sans Mono CJK SC" ];
+      sansSerif = [
+        "Noto Sans"
+        "Noto Sans CJK SC"
+        "WenQuanYi Micro Hei"
+      ];
+      serif = [
+        "Noto Serif"
+        "Noto Serif CJK SC"
+      ];
+      monospace = [
+        "DejaVu Sans Mono"
+        "Noto Sans Mono CJK SC"
+      ];
       emoji = [ "Noto Color Emoji" ];
     };
   };

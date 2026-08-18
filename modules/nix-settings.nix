@@ -9,7 +9,10 @@
   ];
 
   # 启用 nix-command 和 flakes 实验特性，以支持 flake.nix 管理配置。
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
 
   # 每周自动清理 30 天前的旧系统代际和不再被引用的 store 路径，避免 store 随重建无限膨胀。
   nix.gc = {

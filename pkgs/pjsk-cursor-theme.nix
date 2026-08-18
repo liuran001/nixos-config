@@ -3,7 +3,13 @@
 # 并生成 left_ptr 等标准光标别名。官网若更新 zip 内容会导致 hash 校验失败，
 # 届时用 `nix store prefetch-file --json <url>` 重新计算并更新对应条目即可。
 # 安装后在 系统设置 → 颜色与主题 → 光标 中选择 “PJSK ...” 主题并应用。
-{ stdenvNoCC, fetchurl, unzip, win2xcur, lib }:
+{
+  stdenvNoCC,
+  fetchurl,
+  unzip,
+  win2xcur,
+  lib,
+}:
 
 let
   # 官网指针资源包；name 即解压目录名，用于推断主题名和动态/静态类型，不要改动命名格式。
@@ -356,15 +362,15 @@ stdenvNoCC.mkDerivation {
       ["Alternate"]="top-right-arrow right_ptr move dnd-move draft_large draft_small up-arrow up_arrow center_ptr"
     )
 
-    names=(${lib.concatStringsSep " " (map (z: z.name) cursorZips)})
+    names=(${lib.escapeShellArgs (map (z: z.name) cursorZips)})
 
-    # 解包所有 zip（每个包只含 .ani 或 .cur 之一，另一条通配会落空，属正常）
+    # 完整解包所有 zip；转换阶段只会读取其中的 .ani 或 .cur 文件。
     i=0
     for f in $srcs; do
       n="''${names[$i]}"
       d="extracted/''${n%.zip}"
       mkdir -p "$d"
-      unzip -qo "$f" -d "$d" '*.ani' '*.cur' 2>/dev/null || true
+      unzip -qo "$f" -d "$d"
       i=$((i + 1))
     done
 
@@ -376,7 +382,7 @@ stdenvNoCC.mkDerivation {
       case "$lc_theme" in
         *ani*|*animation*) files=("$theme_dir"/*.ani) ;;
         *cur*|*static*|*cursor*) files=("$theme_dir"/*.cur) ;;
-        *) echo "Unknown theme type: $theme" >&2; continue ;;
+        *) echo "Unknown theme type: $theme" >&2; exit 1 ;;
       esac
       win2xcur "''${files[@]}" -o "output/$theme/"
       for src in output/"$theme"/*; do
@@ -384,10 +390,13 @@ stdenvNoCC.mkDerivation {
         name="''${src##*/}"
         aliases="''${PJSK_TO_X_MAP[$name]}"
         [ -z "$aliases" ] && continue
+        # 每组别名保留一个实际文件，其余使用相对符号链接，避免把同一光标复制数十份。
+        read -r primary _ <<< "$aliases"
+        mv -- "$src" "output/$theme/$primary"
         for alias in $aliases; do
-          cp "$src" "output/$theme/$alias"
+          [ "$alias" = "$primary" ] && continue
+          ln -sfn "$primary" "output/$theme/$alias"
         done
-        rm "$src"
       done
     done
 
@@ -398,7 +407,7 @@ stdenvNoCC.mkDerivation {
       case "$lc_dir" in
         *ani*|*animation*|*animated*) suffix="Animated" ;;
         *cur*|*cursor*|*static*) suffix="Static" ;;
-        *) echo "Unknown theme type: $dir" >&2; continue ;;
+        *) echo "Unknown theme type: $dir" >&2; exit 1 ;;
       esac
       base=$(printf '%s' "$dir" | awk -F'-' '{
         out=""
@@ -412,7 +421,7 @@ stdenvNoCC.mkDerivation {
       [ -n "$base" ] || base="$dir"
       dest="packaged/PJSK $base $suffix"
       mkdir -p "$dest/cursors"
-      cp "$theme_dir"/* "$dest/cursors/"
+      cp -a "$theme_dir"/. "$dest/cursors/"
       printf '[Icon Theme]\nName=PJSK %s %s\nComment=Project Sekai Cursors, From https://colorfulstage.com/media/download/\n' "$base" "$suffix" > "$dest/index.theme"
     done
 
@@ -421,8 +430,8 @@ stdenvNoCC.mkDerivation {
 
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/share/icons
-    cp -r packaged/* $out/share/icons/
+    mkdir -p "$out/share/icons"
+    cp -a packaged/. "$out/share/icons/"
     runHook postInstall
   '';
 

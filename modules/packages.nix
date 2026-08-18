@@ -1,9 +1,6 @@
-# 系统软件包。以后安装/卸载软件主要修改这个文件。
+# 系统级软件包。这里仅保留所有用户和故障排查都需要的基础工具；
+# baka 的桌面应用与开发工具统一放在 home.nix 的 home.packages 中。
 # 可运行 `nix search nixpkgs <关键词>` 搜索软件包；添加或删除名称后要重新构建系统。
-#
-# nixpkgs 没有、需要自己动手打包的软件，请按 callPackage 约定放到 pkgs/ 目录下：
-# 每个包一个 .nix 文件（参考 pkgs/kimi-code.nix），然后在这里加一行
-# (callPackage ../pkgs/<包名>.nix { }) 引用它。
 { pkgs, ... }:
 
 {
@@ -17,17 +14,8 @@
   environment.systemPackages = with pkgs; [
     vim # 文本编辑器，可用于修改配置文件；系统默认也提供 Nano。
     wget # 命令行文件下载工具。
-    fastfetch # 在终端显示系统和硬件概要信息。
-    telegram-desktop # Telegram 桌面客户端。
     git # 版本控制工具。
     curl # 用于下载内容和测试网络接口的命令行工具。
-    microsoft-edge # Microsoft Edge 浏览器，需要允许非自由软件。
-    codex # OpenAI Codex 命令行工具。
-    (callPackage ../pkgs/kimi-code.nix { }) # Kimi Code 命令行编程助手，运行命令为 kimi。
-    (callPackage ../pkgs/pjsk-cursor-theme.nix { }) # Project Sekai 光标主题，在系统设置的光标页选择 “PJSK ...”。
-    vlc # 视频和音频播放器。
-    vscode # Visual Studio Code 编辑器，需要允许非自由软件。
-    flameshot # 截图工具，支持贴图钉在屏幕上；KDE 也自带 Spectacle，按 PrintScreen 可用。
   ];
 
   # 少数程序需要额外的特权包装器或用户会话服务，不能只放进 systemPackages。

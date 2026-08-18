@@ -1,12 +1,13 @@
 # Kimi Code 命令行编程助手：官方 Linux x64 二进制的 Nix 封装。
 # 当前 nixpkgs 尚未收录 Kimi，因此封装官方发行版；版本和 SHA-256 均固定，
 # 重新构建时会验证下载内容。升级时修改 version 并重新计算 hash。
-{ stdenvNoCC
-, stdenv
-, fetchurl
-, autoPatchelfHook
-, unzip
-, lib
+{
+  stdenvNoCC,
+  stdenv,
+  fetchurl,
+  autoPatchelfHook,
+  unzip,
+  lib,
 }:
 
 stdenvNoCC.mkDerivation rec {

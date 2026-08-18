@@ -1,4 +1,4 @@
-# 桌面环境：KDE Plasma 6、SDDM 登录管理器、PipeWire 音频、打印服务。
+# 桌面环境：KDE Plasma 6、SDDM 登录管理器、蓝牙、PipeWire 音频、打印服务。
 { ... }:
 
 {
@@ -33,6 +33,14 @@
 
   # 启用 CUPS 打印服务，用于发现、添加和使用打印机。
   services.printing.enable = true;
+
+  # 启用 BlueZ 蓝牙后端，并安装 Blueman 的 D-Bus/systemd 集成供 niri 会话使用。
+  # KDE 会继续使用原生 Bluedevil；Blueman 托盘由 home.nix 限定为只在 niri 中启动。
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+  services.blueman.enable = true;
 
   # 使用 PipeWire 统一处理声音，并通过兼容层支持 ALSA 和 PulseAudio 应用程序。
   # 关闭旧的 PulseAudio 服务，避免它与 PipeWire 的 PulseAudio 兼容服务发生冲突。

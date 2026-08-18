@@ -36,6 +36,8 @@ output "DP-3" {
 layout {
     gaps 12
     center-focused-column "never"
+    // 直接由 niri 绘制纯色背景，无需额外运行 swaybg。
+    background-color "#1a1b26"
 
     // Mod+R 循环切换的列宽预设。
     preset-column-widths {
@@ -54,10 +56,6 @@ layout {
 
     border {
         off
-        width 2
-        active-color "#ffc87f"
-        inactive-color "#505050"
-        urgent-color "#9b0000"
     }
 
     shadow {
@@ -75,11 +73,12 @@ environment {
     XCURSOR_SIZE "24"
 }
 
-// 自启动组件。fcitx5、polkit 认证弹窗、网络/蓝牙托盘走 XDG autostart，无需在此列出。
+// 自启动组件。fcitx5、网络和蓝牙托盘走 XDG autostart，无需在此列出。
 spawn-at-startup "waybar"
 spawn-at-startup "mako"
 spawn-at-startup "xwayland-satellite"
-spawn-at-startup "swaybg" "-c" "#1a1b26"
+// polkit-gnome 的 XDG 项仅允许 GNOME/XFCE/Unity，因此在 niri 中显式启动认证代理。
+spawn-at-startup "/run/current-system/sw/libexec/polkit-gnome-authentication-agent-1"
 // 空闲 5 分钟锁屏，10 分钟关屏；挂起前锁屏。
 spawn-at-startup "swayidle" "-w" "timeout" "300" "swaylock -f" "timeout" "600" "niri msg action power-off-monitors" "resume" "niri msg action power-on-monitors" "before-sleep" "swaylock -f"
 // 夜间色温（上海经纬度）。
@@ -105,16 +104,16 @@ binds {
     Super+Alt+L hotkey-overlay-title="锁屏: swaylock" { spawn "swaylock" "-f"; }
 
     // 音量（锁定时也可用，上限 100%）。
-    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.05+ -l 1.0"; }
-    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.05-"; }
-    XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
-    XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.05+" "-l" "1.0"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.05-"; }
+    XF86AudioMute        allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
 
     // 媒体键。
-    XF86AudioPlay allow-when-locked=true { spawn-sh "playerctl play-pause"; }
-    XF86AudioStop allow-when-locked=true { spawn-sh "playerctl stop"; }
-    XF86AudioPrev allow-when-locked=true { spawn-sh "playerctl previous"; }
-    XF86AudioNext allow-when-locked=true { spawn-sh "playerctl next"; }
+    XF86AudioPlay allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioStop allow-when-locked=true { spawn "playerctl" "stop"; }
+    XF86AudioPrev allow-when-locked=true { spawn "playerctl" "previous"; }
+    XF86AudioNext allow-when-locked=true { spawn "playerctl" "next"; }
 
     // 亮度键。
     XF86MonBrightnessUp allow-when-locked=true { spawn "brightnessctl" "--class=backlight" "set" "+10%"; }

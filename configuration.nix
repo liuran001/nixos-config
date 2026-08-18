@@ -33,4 +33,27 @@
     ./modules/packages.nix
     ./modules/nix-settings.nix
   ];
+
+  # hardware-configuration.nix 负责描述检测到的设备和分区；这里单独维护人为选择的挂载策略。
+  # Btrfs 透明压缩只影响新写入或之后被改写的数据，不会自动重压缩已有数据。
+  fileSystems = {
+    "/".options = [ "compress=zstd" ];
+    "/home".options = [ "compress=zstd" ];
+    # Nix store 不依赖访问时间；noatime 可减少大量读取导致的元数据写入。
+    "/nix".options = [
+      "compress=zstd"
+      "noatime"
+    ];
+  };
+
+  # 每月校验一次 Btrfs 数据与元数据。三个子卷共用同一文件系统，模块会按设备去重。
+  # 单盘 scrub 可以发现校验错误，但不能代替备份，也不能自动修复无冗余的数据。
+  services.btrfs.autoScrub.enable = true;
+
+  # 提供约 6.4 GiB 的压缩内存交换区作为 OOM 缓冲；容量按需使用，不会预占 10% 内存。
+  # zram 不能用于休眠；本机原本也没有磁盘 swap/休眠配置。
+  zramSwap = {
+    enable = true;
+    memoryPercent = 10;
+  };
 }

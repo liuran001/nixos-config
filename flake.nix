@@ -1,5 +1,5 @@
 # 本机的 NixOS flake 入口。
-# 构建系统：`sudo nixos-rebuild switch --flake /etc/nixos`
+# 构建系统：`nixos-rebuild switch --flake /etc/nixos --sudo`
 # 更新 nixpkgs 锁定版本：`nix flake update`（在 ~/nixos 目录下执行，然后重新构建）。
 {
   description = "baka 的 NixOS 系统配置";
@@ -16,14 +16,49 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager }: {
-    # 属性名与主机名一致，nixos-rebuild 会自动选择它。
-    nixosConfigurations."bakaPC-NixOS" = nixpkgs.lib.nixosSystem {
+  outputs =
+    {
+      nixpkgs,
+      home-manager,
+      ...
+    }:
+    let
       system = "x86_64-linux";
-      modules = [
-        ./configuration.nix
-        home-manager.nixosModules.home-manager
-      ];
+      pkgs = nixpkgs.legacyPackages.${system};
+      formatter = pkgs.nixfmt-tree.override {
+        settings.formatter.nixfmt.excludes = [ "hardware-configuration.nix" ];
+      };
+      nixSources = pkgs.lib.fileset.toSource {
+        root = ./.;
+        fileset = pkgs.lib.fileset.fileFilter (
+          file: file.hasExt "nix" && file.name != "hardware-configuration.nix"
+        ) ./.;
+      };
+      nixosConfiguration = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          ./configuration.nix
+          home-manager.nixosModules.home-manager
+        ];
+      };
+    in
+    {
+      # `nix fmt` 递归整理所有手写 Nix 文件；自动生成的硬件配置保持原样。
+      formatter.${system} = formatter;
+
+      # 属性名与主机名一致，nixos-rebuild 会自动选择它。
+      nixosConfigurations."bakaPC-NixOS" = nixosConfiguration;
+
+      # `nix flake check` 同时验证格式并构建完整系统闭包。
+      checks.${system} = {
+        formatting = pkgs.runCommand "check-nix-formatting" { nativeBuildInputs = [ formatter ]; } ''
+          cp -r ${nixSources}/. source
+          chmod -R u+w source
+          cd source
+          treefmt --tree-root . --ci
+          touch "$out"
+        '';
+        system = nixosConfiguration.config.system.build.toplevel;
+      };
     };
-  };
 }
