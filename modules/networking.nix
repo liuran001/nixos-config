@@ -3,7 +3,7 @@
 
 {
   # 设置本机主机名；它会显示在终端提示符、局域网设备列表等位置。
-  networking.hostName = "nixos";
+  networking.hostName = "bakaPC-NixOS";
   # 下面的选项会使用 wpa_supplicant 管理无线网络。当前已经启用 NetworkManager，因此不要同时启用它。
   # networking.wireless.enable = true;
 

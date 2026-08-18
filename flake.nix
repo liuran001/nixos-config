@@ -10,8 +10,8 @@
   };
 
   outputs = { self, nixpkgs }: {
-    # 属性名 nixos 与主机名一致，nixos-rebuild 会自动选择它。
-    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+    # 属性名与主机名一致，nixos-rebuild 会自动选择它。
+    nixosConfigurations."bakaPC-NixOS" = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [ ./configuration.nix ];
     };
