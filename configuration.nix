@@ -6,6 +6,7 @@
 #   nvidia.nix       NVIDIA 显卡驱动
 #   users.nix        用户账户和 sudo 权限
 #   fonts.nix        系统字体（中西文常用字体、Emoji）
+#   niri.nix         niri 滚动平铺式 Wayland 合成器
 #   pjsk-cursors.nix Project Sekai 鼠标指针主题
 #   packages.nix     系统软件包（装软件改这里）
 #   nix-settings.nix Nix 镜像源、flakes、stateVersion
@@ -27,6 +28,7 @@
     ./modules/nvidia.nix
     ./modules/users.nix
     ./modules/fonts.nix
+    ./modules/niri.nix
     ./modules/pjsk-cursors.nix
     ./modules/packages.nix
     ./modules/nix-settings.nix
