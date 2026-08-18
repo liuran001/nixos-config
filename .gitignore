@@ -1,0 +1,3 @@
+# nixos-rebuild build 等命令产生的构建结果符号链接
+result
+result-*
