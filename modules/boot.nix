@@ -2,8 +2,15 @@
 { pkgs, ... }:
 
 {
-  # 使用 systemd-boot 管理 UEFI 启动菜单。
-  boot.loader.systemd-boot.enable = true;
+  # 使用 GRUB 管理 UEFI 启动菜单，并通过 os-prober 自动探测其他硬盘上的 Windows 启动项。
+  boot.loader.grub = {
+    enable = true;
+    # UEFI 模式安装，不写入硬盘 MBR。
+    efiSupport = true;
+    device = "nodev";
+    # 扫描所有硬盘上的其他操作系统（如 Windows）并加入启动菜单。
+    useOSProber = true;
+  };
   # 允许 NixOS 写入 UEFI 固件变量，以便创建和更新系统启动项。
   boot.loader.efi.canTouchEfiVariables = true;
 
