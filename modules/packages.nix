@@ -63,6 +63,7 @@ in
     kimiCode # Kimi Code 命令行编程助手，运行命令为 kimi。
     vlc # 视频和音频播放器。
     vscode # Visual Studio Code 编辑器，需要允许非自由软件。
+    snipaste # 截图和贴图工具。
   ];
 
   # 少数程序需要额外的特权包装器或用户会话服务，不能只放进 systemPackages。
