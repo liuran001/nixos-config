@@ -12,11 +12,11 @@
 
 stdenvNoCC.mkDerivation rec {
   pname = "kimi-code";
-  version = "0.37.1";
+  version = "0.37.2";
 
   src = fetchurl {
     url = "https://github.com/MoonshotAI/kimi-code/releases/download/%40moonshot-ai/kimi-code%40${version}/kimi-code-linux-x64.zip";
-    hash = "sha256-9dVX4Eg4vcD/PWD7EIoNt/9S9MhwKpT8q84Eh/YAZbc=";
+    hash = "sha256-GmbZylCRxiDnsulrq7QU3YUH4yTYbTmwEc95ElyovQk=";
   };
 
   nativeBuildInputs = [
