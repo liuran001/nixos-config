@@ -7,22 +7,7 @@
 {
   programs.niri.enable = true;
 
-  # 用户级配置文件集中存放在 modules/niri/ 目录下，通过软链接部署到 ~/.config/。
-  # 链接目标在 nix store 中是只读的：要改配置请编辑本 repo 中的文件并重新构建系统，
-  # niri 会热重载新配置，无需重新登录。
-  systemd.tmpfiles.rules = [
-    "d /home/baka/.config/niri 0755 baka users - -"
-    "L+ /home/baka/.config/niri/config.kdl - - - - ${./niri/config.kdl}"
-    "d /home/baka/.config/waybar 0755 baka users - -"
-    "L+ /home/baka/.config/waybar/config.jsonc - - - - ${./niri/waybar-config.jsonc}"
-    "L+ /home/baka/.config/waybar/style.css - - - - ${./niri/waybar-style.css}"
-    "d /home/baka/.config/mako 0755 baka users - -"
-    "L+ /home/baka/.config/mako/config - - - - ${./niri/mako-config}"
-    "d /home/baka/.config/fuzzel 0755 baka users - -"
-    "L+ /home/baka/.config/fuzzel/fuzzel.ini - - - - ${./niri/fuzzel.ini}"
-    "d /home/baka/.config/swaylock 0755 baka users - -"
-    "L+ /home/baka/.config/swaylock/config - - - - ${./niri/swaylock.conf}"
-  ];
+  # niri / waybar / mako 等用户级配置由 home-manager 管理，见 modules/home.nix。
 
   environment.systemPackages = with pkgs; [
     xwayland-satellite # niri 不内置 Xwayland，X11 程序靠它运行（config.kdl 中自启）
