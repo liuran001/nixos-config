@@ -1,4 +1,4 @@
-# baka 的 Git 与 Bash 配置。
+# baka 的 Git、Bash 与 Zsh 配置。
 let
   shellAliases = {
     ll = "ls -alh";
@@ -11,11 +11,8 @@ in
 {
   programs.git = {
     enable = true;
-    settings = {
-      user.name = "liuran001";
-      user.email = "bdovo@bdovo.cc";
-      init.defaultBranch = "main";
-    };
+    # 不声明姓名和邮箱，让每个仓库自行决定提交身份。
+    settings.init.defaultBranch = "main";
   };
 
   programs.bash = {
@@ -29,4 +26,31 @@ in
     historyFileSize = 100000;
   };
 
+  programs.zsh = {
+    enable = true;
+    enableCompletion = true;
+    inherit shellAliases;
+
+    autosuggestion.enable = true;
+    syntaxHighlighting.enable = true;
+
+    history = {
+      size = 10000;
+      save = 100000;
+      ignoreDups = true;
+      ignoreSpace = true;
+    };
+
+    oh-my-zsh = {
+      enable = true;
+      plugins = [
+        "git"
+        "docker"
+        "npm"
+        "python"
+        "sudo"
+      ];
+      theme = "robbyrussell";
+    };
+  };
 }
