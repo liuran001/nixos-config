@@ -1,48 +1,11 @@
 # 系统软件包。以后安装/卸载软件主要修改这个文件。
 # 可运行 `nix search nixpkgs <关键词>` 搜索软件包；添加或删除名称后要重新构建系统。
+#
+# nixpkgs 没有、需要自己动手打包的软件，请按 callPackage 约定放到 pkgs/ 目录下：
+# 每个包一个 .nix 文件（参考 pkgs/kimi-code.nix），然后在这里加一行
+# (callPackage ../pkgs/<包名>.nix { }) 引用它。
 { pkgs, ... }:
 
-let
-  # 当前 nixpkgs 尚未收录 Kimi，因此把官方发行的 Linux x64 二进制封装为本地 Nix 软件包。
-  # 版本和 SHA-256 均固定，重新构建时会验证下载内容，避免上游文件被静默替换。
-  kimiCode = pkgs.stdenvNoCC.mkDerivation rec {
-    pname = "kimi-code";
-    version = "0.37.1";
-
-    src = pkgs.fetchurl {
-      url = "https://github.com/MoonshotAI/kimi-code/releases/download/%40moonshot-ai/kimi-code%40${version}/kimi-code-linux-x64.zip";
-      hash = "sha256-9dVX4Eg4vcD/PWD7EIoNt/9S9MhwKpT8q84Eh/YAZbc=";
-    };
-
-    nativeBuildInputs = [
-      pkgs.autoPatchelfHook
-      pkgs.unzip
-    ];
-    buildInputs = [ pkgs.stdenv.cc.cc.lib ];
-    dontStrip = true;
-
-    unpackPhase = ''
-      runHook preUnpack
-      unzip "$src"
-      runHook postUnpack
-    '';
-
-    installPhase = ''
-      runHook preInstall
-      install -Dm755 kimi "$out/bin/kimi"
-      runHook postInstall
-    '';
-
-    meta = with pkgs.lib; {
-      description = "Kimi Code command-line coding agent";
-      homepage = "https://github.com/MoonshotAI/kimi-code";
-      license = licenses.mit;
-      mainProgram = "kimi";
-      platforms = [ "x86_64-linux" ];
-      sourceProvenance = [ sourceTypes.binaryNativeCode ];
-    };
-  };
-in
 {
   # 允许安装许可证不符合 Nixpkgs 自由软件标准的软件；Microsoft Edge、VS Code 等软件需要此选项。
   nixpkgs.config.allowUnfree = true;
@@ -60,7 +23,7 @@ in
     curl # 用于下载内容和测试网络接口的命令行工具。
     microsoft-edge # Microsoft Edge 浏览器，需要允许非自由软件。
     codex # OpenAI Codex 命令行工具。
-    kimiCode # Kimi Code 命令行编程助手，运行命令为 kimi。
+    (callPackage ../pkgs/kimi-code.nix { }) # Kimi Code 命令行编程助手，运行命令为 kimi。
     vlc # 视频和音频播放器。
     vscode # Visual Studio Code 编辑器，需要允许非自由软件。
     flameshot # 截图工具，支持贴图钉在屏幕上；KDE 也自带 Spectacle，按 PrintScreen 可用。
