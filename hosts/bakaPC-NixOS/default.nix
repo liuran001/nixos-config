@@ -15,10 +15,12 @@
     # 可复用于其他主机的系统功能。
     ../../modules/desktop.nix
     ../../modules/fonts.nix
+    ../../modules/gaming.nix
     ../../modules/i18n.nix
     ../../modules/niri.nix
     ../../modules/nix-settings.nix
     ../../modules/packages.nix
+    ../../modules/virtualisation.nix
   ];
 
   # NixOS 与 Home Manager 的接线；具体用户配置位于 home/baka/。

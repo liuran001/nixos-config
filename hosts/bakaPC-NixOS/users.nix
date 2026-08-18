@@ -7,8 +7,10 @@
     isNormalUser = true; # 普通可登录用户，而不是系统服务账户。
     description = "baka"; # 用户的显示名称。
     shell = pkgs.zsh;
-    # kvm 供 Android 模拟器使用；networkmanager 管理网络；wheel 使用 sudo。
+    # docker 组可直接管理容器（权限等同 root）；kvm 供 Android 模拟器使用。
+    # networkmanager 管理网络；wheel 使用 sudo。
     extraGroups = [
+      "docker"
       "kvm"
       "networkmanager"
       "wheel"
