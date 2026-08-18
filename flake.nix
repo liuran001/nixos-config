@@ -14,12 +14,17 @@
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Codex Desktop 的社区 Nix 封装；固定提交以避免上游 main 变动造成不可复现构建。
+    # 保留它自己的 nixpkgs 锁定版本，因为封装会审计并修补官方 Electron 二进制。
+    codex-desktop-linux.url = "github:ilysenko/codex-desktop-linux/1875dc2eaab6f9448617d18d0eda58902edf0f1a";
   };
 
   outputs =
     {
       nixpkgs,
       home-manager,
+      codex-desktop-linux,
       ...
     }:
     let
@@ -36,6 +41,7 @@
       };
       nixosConfiguration = nixpkgs.lib.nixosSystem {
         inherit system;
+        specialArgs = { inherit codex-desktop-linux; };
         modules = [
           ./hosts/bakaPC-NixOS
           home-manager.nixosModules.home-manager
