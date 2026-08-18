@@ -1,5 +1,9 @@
 # bakaPC-NixOS 主机入口：汇总本机专属配置、可复用系统模块与 baka 的 Home Manager 配置。
-{ codex-desktop-linux, ... }:
+{
+  codex-desktop-linux,
+  omp,
+  ...
+}:
 
 {
   imports = [
@@ -29,9 +33,11 @@
     useGlobalPkgs = true;
     useUserPackages = true;
     backupFileExtension = "hm-bak";
+    extraSpecialArgs = { inherit omp; };
     users.baka.imports = [
       ../../home/baka
       codex-desktop-linux.homeManagerModules.default
+      omp.homeManagerModules.default
     ];
   };
 }

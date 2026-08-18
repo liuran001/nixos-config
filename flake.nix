@@ -25,6 +25,12 @@
     # Codex Desktop 的社区 Nix 封装；固定提交以避免上游 main 变动造成不可复现构建。
     # 保留它自己的 nixpkgs 锁定版本，因为封装会审计并修补官方 Electron 二进制。
     codex-desktop-linux.url = "github:ilysenko/codex-desktop-linux/1875dc2eaab6f9448617d18d0eda58902edf0f1a";
+
+    # Oh My Pi 自带 Home Manager 模块；固定提交并复用本仓库的 nixpkgs。
+    omp = {
+      url = "github:can1357/oh-my-pi/8500092296621a6826b7136e840f8a59ea338958";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -33,6 +39,7 @@
       home-manager,
       agenix,
       codex-desktop-linux,
+      omp,
       ...
     }:
     let
@@ -49,7 +56,9 @@
       };
       nixosConfiguration = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit codex-desktop-linux; };
+        specialArgs = {
+          inherit codex-desktop-linux omp;
+        };
         modules = [
           ./hosts/bakaPC-NixOS
           agenix.nixosModules.default
