@@ -5,7 +5,7 @@
   home.packages = with pkgs; [
     # 通讯、协作与远程桌面。
     wechat
-    qq
+    (callPackage ../../pkgs/qq.nix { })
     telegram-desktop
     feishu
     wemeet
