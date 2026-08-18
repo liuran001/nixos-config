@@ -8,11 +8,10 @@
 #   fonts.nix        系统字体（中西文常用字体、Emoji）
 #   home.nix         home-manager：用户级配置（~/.config 点文件）
 #   niri.nix         niri 滚动平铺式 Wayland 合成器及配套组件
-#   pjsk-cursors.nix Project Sekai 鼠标指针主题
 #   packages.nix     系统软件包（装软件改这里）
 #   nix-settings.nix Nix 镜像源、flakes、stateVersion
 # 修改并保存后，运行 `git add -A && git commit`，再运行
-# `sudo nixos-rebuild switch --flake /etc/nixos` 构建并启用新配置。
+# `nixos-rebuild switch --flake /etc/nixos --sudo`（或直接敲别名 nrs）构建并启用新配置。
 # 注意：新增的配置文件必须先 git add，否则 nixos-rebuild 看不到它。
 { ... }:
 
@@ -31,7 +30,6 @@
     ./modules/fonts.nix
     ./modules/home.nix
     ./modules/niri.nix
-    ./modules/pjsk-cursors.nix
     ./modules/packages.nix
     ./modules/nix-settings.nix
   ];

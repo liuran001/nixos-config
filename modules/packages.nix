@@ -24,6 +24,7 @@
     microsoft-edge # Microsoft Edge 浏览器，需要允许非自由软件。
     codex # OpenAI Codex 命令行工具。
     (callPackage ../pkgs/kimi-code.nix { }) # Kimi Code 命令行编程助手，运行命令为 kimi。
+    (callPackage ../pkgs/pjsk-cursor-theme.nix { }) # Project Sekai 光标主题，在系统设置的光标页选择 “PJSK ...”。
     vlc # 视频和音频播放器。
     vscode # Visual Studio Code 编辑器，需要允许非自由软件。
     flameshot # 截图工具，支持贴图钉在屏幕上；KDE 也自带 Spectacle，按 PrintScreen 可用。
