@@ -20,6 +20,7 @@
     ../../modules/niri.nix
     ../../modules/nix-settings.nix
     ../../modules/packages.nix
+    ../../modules/secrets.nix
     ../../modules/virtualisation.nix
   ];
 

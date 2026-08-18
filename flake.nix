@@ -15,6 +15,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # age 加密的声明式秘密管理；固定提交并复用本仓库的 nixpkgs/Home Manager。
+    agenix = {
+      url = "git+https://github.com/ryantm/agenix.git?rev=b027ee29d959fda4b60b57566d64c98a202e0feb";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
+
     # Codex Desktop 的社区 Nix 封装；固定提交以避免上游 main 变动造成不可复现构建。
     # 保留它自己的 nixpkgs 锁定版本，因为封装会审计并修补官方 Electron 二进制。
     codex-desktop-linux.url = "github:ilysenko/codex-desktop-linux/1875dc2eaab6f9448617d18d0eda58902edf0f1a";
@@ -24,6 +31,7 @@
     {
       nixpkgs,
       home-manager,
+      agenix,
       codex-desktop-linux,
       ...
     }:
@@ -44,7 +52,9 @@
         specialArgs = { inherit codex-desktop-linux; };
         modules = [
           ./hosts/bakaPC-NixOS
+          agenix.nixosModules.default
           home-manager.nixosModules.home-manager
+          { environment.systemPackages = [ agenix.packages.${system}.default ]; }
         ];
       };
     in
