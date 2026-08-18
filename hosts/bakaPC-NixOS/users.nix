@@ -7,8 +7,9 @@
     isNormalUser = true; # 普通可登录用户，而不是系统服务账户。
     description = "baka"; # 用户的显示名称。
     shell = pkgs.zsh;
-    # networkmanager 管理网络；wheel 使用 sudo。
+    # kvm 供 Android 模拟器使用；networkmanager 管理网络；wheel 使用 sudo。
     extraGroups = [
+      "kvm"
       "networkmanager"
       "wheel"
     ];

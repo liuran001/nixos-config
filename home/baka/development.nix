@@ -2,5 +2,12 @@
 { pkgs, ... }:
 
 {
-  home.packages = with pkgs; [ vscode ];
+  home.packages = with pkgs; [
+    python3
+    nodejs
+    android-tools
+    android-studio
+    jetbrains.idea
+    vscode
+  ];
 }
