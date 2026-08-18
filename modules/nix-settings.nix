@@ -11,6 +11,15 @@
   # 启用 nix-command 和 flakes 实验特性，以支持 flake.nix 管理配置。
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
+  # 每周自动清理 30 天前的旧系统代际和不再被引用的 store 路径，避免 store 随重建无限膨胀。
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 30d";
+  };
+  # 通过硬链接去重 store 中的相同文件，节省磁盘空间。
+  nix.settings.auto-optimise-store = true;
+
   # stateVersion 是有状态数据格式的兼容基线，例如部分服务的数据目录和数据库版本。
   # 它不是当前安装的 NixOS 版本；正常升级系统时也不要随版本号一起修改。
   # 通常应永久保留首次安装系统时的值。随意提高它可能触发不可逆的数据迁移。

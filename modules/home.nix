@@ -21,9 +21,11 @@
       # git 全局配置（此前只有本 repo 的局部占位身份）。
       programs.git = {
         enable = true;
-        userName = "liuran001";
-        userEmail = "bdovo@bdovo.cc";
-        extraConfig.init.defaultBranch = "main";
+        settings = {
+          user.name = "liuran001";
+          user.email = "bdovo@bdovo.cc";
+          init.defaultBranch = "main";
+        };
       };
 
       # bash 配置（系统原先没有 ~/.bashrc）。
@@ -31,8 +33,9 @@
         enable = true;
         shellAliases = {
           ll = "ls -alh";
-          # 应用本仓库系统配置的常用命令。
-          nrs = "sudo nixos-rebuild switch --flake /etc/nixos";
+          # 应用本仓库系统配置的常用命令。不要用 sudo 包裹整个命令（会在 .git/objects
+          # 留下 root 属主文件）；--sudo 让 nixos-rebuild 只在激活等必要步骤提权。
+          nrs = "nixos-rebuild switch --flake /etc/nixos --sudo";
         };
         # 历史记录：忽略重复命令和以空格开头的命令。
         historyControl = [ "ignoredups" "ignorespace" ];
