@@ -9,6 +9,7 @@
     ./display.nix
     ./networking.nix
     ./nvidia.nix
+    ./secrets.nix
     ./storage.nix
     ./users.nix
 
@@ -20,7 +21,6 @@
     ../../modules/niri.nix
     ../../modules/nix-settings.nix
     ../../modules/packages.nix
-    ../../modules/secrets.nix
     ../../modules/virtualisation.nix
   ];
 
