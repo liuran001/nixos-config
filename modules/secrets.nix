@@ -2,6 +2,12 @@
 {
   age = {
     identityPaths = [ "/home/baka/.ssh/id_ed25519" ];
+    secrets.github-token = {
+      file = ../secrets/github-token.age;
+      owner = "baka";
+      group = "users";
+      mode = "0400";
+    };
     secrets.oapi-api-key = {
       file = ../secrets/oapi-api-key.age;
       owner = "baka";

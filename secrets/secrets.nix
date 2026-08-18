@@ -3,5 +3,6 @@ let
   baka = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDg6oLc5U6mO7Y8XdlvFSU8IMcBrjjlMfue6WoKWKW1A";
 in
 {
+  "github-token.age".publicKeys = [ baka ];
   "oapi-api-key.age".publicKeys = [ baka ];
 }
