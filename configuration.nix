@@ -5,6 +5,8 @@
 #   desktop.nix      KDE Plasma 桌面、音频、打印
 #   nvidia.nix       NVIDIA 显卡驱动
 #   users.nix        用户账户和 sudo 权限
+#   fonts.nix        系统字体（中西文常用字体、Emoji）
+#   pjsk-cursors.nix Project Sekai 鼠标指针主题
 #   packages.nix     系统软件包（装软件改这里）
 #   nix-settings.nix Nix 镜像源、flakes、stateVersion
 # 修改并保存后，运行 `git add -A && git commit`，再运行
@@ -24,6 +26,8 @@
     ./modules/desktop.nix
     ./modules/nvidia.nix
     ./modules/users.nix
+    ./modules/fonts.nix
+    ./modules/pjsk-cursors.nix
     ./modules/packages.nix
     ./modules/nix-settings.nix
   ];
