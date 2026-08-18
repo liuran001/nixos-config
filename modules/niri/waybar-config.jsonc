@@ -1,0 +1,59 @@
+// waybar 配置（JSONC 格式）。模块文档：https://github.com/Alexays/Waybar/wiki
+{
+  "layer": "top",
+  "position": "top",
+  "height": 32,
+  "spacing": 4,
+
+  "modules-left": ["niri/workspaces", "niri/window"],
+  "modules-center": ["clock"],
+  "modules-right": ["tray", "network", "bluetooth", "pulseaudio", "backlight", "battery"],
+
+  "niri/workspaces": {
+    "format": "{index}",
+    "disable-click": false
+  },
+  "niri/window": {
+    "max-length": 60,
+    "icon": true
+  },
+  "clock": {
+    "format": "{:%a %m-%d %H:%M}",
+    "tooltip-format": "<tt>{:%Y-%m-%d %H:%M:%S}</tt>"
+  },
+  "tray": {
+    "spacing": 8
+  },
+  "network": {
+    "format-wifi": " {essid}",
+    "format-ethernet": " 有线",
+    "format-disconnected": " 已断网",
+    "tooltip-format": "{ifname} {ipaddr}",
+    "on-click": "nm-connection-editor"
+  },
+  "bluetooth": {
+    "format": " ",
+    "format-connected": " {device_alias}",
+    "format-off": "",
+    "format-disabled": "",
+    "on-click": "blueman-manager"
+  },
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "format-muted": " 已静音",
+    "format-icons": ["", "", ""],
+    "on-click": "pavucontrol",
+    "on-scroll-up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+",
+    "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+  },
+  "backlight": {
+    "format": " {percent}%"
+  },
+  "battery": {
+    "format": "{icon} {capacity}%",
+    "format-charging": " {capacity}%",
+    "format-icons": ["", "", "", "", ""],
+    "states": { "warning": 30, "critical": 15 },
+    "tooltip-format": "{timeTo}"
+  }
+}

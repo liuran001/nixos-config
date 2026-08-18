@@ -1,0 +1,10 @@
+# mako 通知守护进程配置。
+font=Noto Sans, Noto Sans CJK SC 11
+background-color=#1a1b26ee
+text-color=#c0caf5
+border-color=#7fc8ff
+border-size=1
+border-radius=8
+padding=10
+default-timeout=5000
+max-visible=5

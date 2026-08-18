@@ -1,0 +1,44 @@
+/* waybar 样式（CSS） */
+* {
+  font-family: "Noto Sans", "Noto Sans CJK SC", sans-serif;
+  font-size: 13px;
+  min-height: 0;
+}
+
+window#waybar {
+  background: rgba(26, 27, 38, 0.92);
+  color: #c0caf5;
+}
+
+#workspaces button {
+  padding: 0 6px;
+  color: #565f89;
+}
+#workspaces button.active {
+  color: #7fc8ff;
+}
+#workspaces button.urgent {
+  color: #f7768e;
+}
+
+#window {
+  padding: 0 8px;
+  color: #9aa5ce;
+}
+
+#clock,
+#tray,
+#network,
+#bluetooth,
+#pulseaudio,
+#backlight,
+#battery {
+  padding: 0 8px;
+}
+
+#battery.warning {
+  color: #e0af68;
+}
+#battery.critical {
+  color: #f7768e;
+}
