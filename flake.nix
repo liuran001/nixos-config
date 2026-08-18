@@ -26,7 +26,7 @@
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
       formatter = pkgs.nixfmt-tree.override {
-        settings.formatter.nixfmt.excludes = [ "hardware-configuration.nix" ];
+        settings.formatter.nixfmt.excludes = [ "hosts/bakaPC-NixOS/hardware-configuration.nix" ];
       };
       nixSources = pkgs.lib.fileset.toSource {
         root = ./.;
@@ -37,7 +37,7 @@
       nixosConfiguration = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
-          ./configuration.nix
+          ./hosts/bakaPC-NixOS
           home-manager.nixosModules.home-manager
         ];
       };

@@ -1,5 +1,5 @@
 # 系统级软件包。这里仅保留所有用户和故障排查都需要的基础工具；
-# baka 的桌面应用与开发工具统一放在 home.nix 的 home.packages 中。
+# baka 的桌面应用与开发工具统一放在 home/baka/default.nix 的 home.packages 中。
 # 可运行 `nix search nixpkgs <关键词>` 搜索软件包；添加或删除名称后要重新构建系统。
 { pkgs, ... }:
 

@@ -5,15 +5,29 @@ NVIDIA PRIME、蓝牙和 Btrfs 等设置。
 
 ## 目录
 
-- `configuration.nix`：系统入口与人为选择的文件系统策略。
-- `hardware-configuration.nix`：安装时自动生成的本机硬件与分区信息。
-- `modules/`：按功能拆分的系统、桌面和用户配置。
-- `modules/dotfiles/`：由 Home Manager 管理的用户配置文件。
-- `pkgs/`：尚未进入 nixpkgs 的本地软件包。
+```text
+.
+├── hosts/
+│   └── bakaPC-NixOS/       # 本机入口、硬件、启动、显卡、存储与显示器配置
+├── home/
+│   └── baka/               # baka 的 Home Manager 配置和 dotfiles
+├── modules/                # 可复用于其他主机的 NixOS 功能模块
+├── pkgs/                   # 尚未进入 nixpkgs 的本地软件包
+├── flake.nix               # Flake 输入、主机输出、格式器与检查
+└── flake.lock              # 锁定依赖版本
+```
 
-当前只有一台主机，`hardware-configuration.nix` 放在根目录并纳入 Git 是标准且直观的布局。
-它不会在每次构建时自动生成；只有手动运行 `nixos-generate-config` 才可能覆盖它。
-如果以后管理多台机器，再把主机入口和硬件配置一起迁到 `hosts/<hostname>/`。
+目录按职责划分：`hosts/` 只放与具体机器绑定的 UUID、PCI Bus ID、主机名和显示器布局；
+`home/` 只放用户软件与配置；`modules/` 不反向引用某台主机；`pkgs/` 只定义 derivation。
+当前没有引入 flake-parts、overlay 或多层 profiles。
+
+`hosts/bakaPC-NixOS/hardware-configuration.nix` 由安装工具生成，但仍需纳入 Git，构建时不会自动重建。
+需要重新探测硬件时，先输出到临时文件并检查差异，避免覆盖人为模块：
+
+```bash
+nixos-generate-config --show-hardware-config > /tmp/hardware-configuration.nix
+diff -u hosts/bakaPC-NixOS/hardware-configuration.nix /tmp/hardware-configuration.nix
+```
 
 ## 修改与验证
 

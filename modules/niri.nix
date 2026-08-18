@@ -7,7 +7,7 @@
 {
   programs.niri.enable = true;
 
-  # niri / waybar / mako 等用户级配置由 home-manager 管理，见 modules/home.nix。
+  # niri / waybar / mako 等用户级配置由 Home Manager 管理，见 home/baka/。
 
   environment.systemPackages = with pkgs; [
     xwayland-satellite # niri 不内置 Xwayland，X11 程序靠它运行（config.kdl 中自启）

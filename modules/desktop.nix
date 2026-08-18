@@ -18,12 +18,6 @@
     enable = true;
     compositor = "kwin";
   };
-  # 把当前会话的显示器配置（含 eDP-1 125% 缩放）软链给 SDDM 的 kwin 合成器使用。
-  # 以后若在 Plasma 系统设置里改了缩放，需要重新复制 ~/.config/kwinoutputconfig.json 到本文件。
-  systemd.tmpfiles.rules = [
-    "d /var/lib/sddm/.config 0755 sddm sddm - -"
-    "L+ /var/lib/sddm/.config/kwinoutputconfig.json - - - - ${./kwinoutputconfig.json}"
-  ];
 
   # 设置 X11 程序使用美式键盘布局；这不会影响 Fcitx 5 的中英文切换。
   services.xserver.xkb = {
@@ -35,7 +29,7 @@
   services.printing.enable = true;
 
   # 启用 BlueZ 蓝牙后端，并安装 Blueman 的 D-Bus/systemd 集成供 niri 会话使用。
-  # KDE 会继续使用原生 Bluedevil；Blueman 托盘由 home.nix 限定为只在 niri 中启动。
+  # KDE 会继续使用原生 Bluedevil；Blueman 托盘由 home/baka/ 限定为只在 niri 中启动。
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
