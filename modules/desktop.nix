@@ -13,6 +13,17 @@
   # 启用 SDDM 登录管理器和 KDE Plasma 6 桌面环境。
   services.displayManager.sddm.enable = true;
   services.desktopManager.plasma6.enable = true;
+  # SDDM 使用 Wayland 模式（kwin 合成器），否则登录界面不会跟随屏幕缩放。
+  services.displayManager.sddm.wayland = {
+    enable = true;
+    compositor = "kwin";
+  };
+  # 把当前会话的显示器配置（含 eDP-1 125% 缩放）软链给 SDDM 的 kwin 合成器使用。
+  # 以后若在 Plasma 系统设置里改了缩放，需要重新复制 ~/.config/kwinoutputconfig.json 到本文件。
+  systemd.tmpfiles.rules = [
+    "d /var/lib/sddm/.config 0755 sddm sddm - -"
+    "L+ /var/lib/sddm/.config/kwinoutputconfig.json - - - - ${./kwinoutputconfig.json}"
+  ];
 
   # 设置 X11 程序使用美式键盘布局；这不会影响 Fcitx 5 的中英文切换。
   services.xserver.xkb = {

@@ -30,6 +30,8 @@
     # 指定使用 Fcitx 5，而不是 IBus 等其他输入法框架。
     type = "fcitx5";
     fcitx5 = {
+      # KDE Wayland 下使用 Wayland 原生输入法前端，不再设置 GTK_IM_MODULE / QT_IM_MODULE（XMODIFIERS 会保留给 XWayland 应用）。
+      waylandFrontend = true;
       # 安装中文拼音插件和 Rime（中州韵）引擎；当前默认使用普通拼音。
       addons = [
         pkgs.qt6Packages.fcitx5-chinese-addons # 提供拼音、双拼、五笔等常用中文输入方式。
@@ -55,6 +57,8 @@
         # 指定输入法组的显示顺序。
         GroupOrder."0" = "Default";
       };
+      # 放大 Fcitx 5 候选窗字体（默认 Sans 10 在高分屏上偏小）。
+      settings.addons.classicui.globalSection.Font = "Sans 13";
     };
   };
 }

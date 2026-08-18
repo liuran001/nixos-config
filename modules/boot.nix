@@ -14,6 +14,10 @@
     default = "saved";
     # 启动菜单等待 5 秒后自动进入默认项。
     timeout = 5;
+    # 高分屏下放大 GRUB 菜单字体。默认的 unicode.pf2 位图字体无法缩放，
+    # 必须换成 TTF 字体，fontSize 才会生效。
+    font = "${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSansMono.ttf";
+    fontSize = 36;
   };
   # 允许 NixOS 写入 UEFI 固件变量，以便创建和更新系统启动项。
   boot.loader.efi.canTouchEfiVariables = true;
