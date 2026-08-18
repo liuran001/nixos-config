@@ -4,6 +4,7 @@
     ./ai.nix
     ./apps.nix
     ./development.nix
+    ./kde.nix
     ./shell.nix
     ./xdg.nix
   ];
