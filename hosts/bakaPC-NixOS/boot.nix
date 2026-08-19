@@ -26,8 +26,10 @@
   # 启动菜单等待 5 秒后自动进入默认项。
   boot.loader.timeout = 5;
 
-  # 使用当前 nixpkgs 提供的最新内核系列；如果以后遇到驱动兼容问题，可删除此行以使用默认稳定内核。
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  # 使用 linux-zen 内核：面向桌面响应速度调优（低延迟调度、1000 Hz 时钟、
+  # 抢占模型等），并自带 binder/ashmem，Waydroid 可直接使用。
+  # 如果遇到驱动兼容问题，可改回 pkgs.linuxPackages_latest。
+  boot.kernelPackages = pkgs.linuxPackages_zen;
 
   # /tmp 位于 Btrfs 根上，不会自动清空；每次启动清理构建残留。
   # 不用 tmpfs：Nix 会在 /tmp 里构建大包，占满内存比占磁盘更危险。
