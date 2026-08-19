@@ -62,6 +62,18 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      lib = nixpkgs.lib;
+
+      # 仓库自封装软件包的 overlay；系统闭包与 packages 输出共用同一份定义，
+      # 因此 `nix build .#kimi-code` 构建出的就是系统里实际安装的那一个。
+      bakaOverlay = import ./pkgs/overlay.nix { ohMyClaudeCodeSource = oh-my-claudecode; };
+      bakaPkgs = import nixpkgs {
+        inherit system;
+        overlays = [ bakaOverlay ];
+        # 与 modules/packages.nix 保持一致，否则 Edge、VS Code 等包无法单独构建。
+        config.allowUnfree = true;
+      };
+
       formatter = pkgs.nixfmt-tree.override {
         settings.formatter.nixfmt.excludes = [ "hosts/bakaPC-NixOS/hardware-configuration.nix" ];
       };
@@ -73,11 +85,10 @@
       };
       nixosConfiguration = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = {
-          inherit codex-desktop-linux g-helper-linux omp;
-          ohMyClaudeCodeSource = oh-my-claudecode;
-        };
+        # oh-my-claudecode 的源码不再透传给模块，它由 pkgs/overlay.nix 接线。
+        specialArgs = { inherit codex-desktop-linux g-helper-linux omp; };
         modules = [
+          { nixpkgs.overlays = [ bakaOverlay ]; }
           ./hosts/bakaPC-NixOS
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
@@ -88,6 +99,17 @@
     {
       # `nix fmt` 递归整理所有手写 Nix 文件；自动生成的硬件配置保持原样。
       formatter.${system} = formatter;
+
+      # 单独构建仓库里的自封装包，例如升级版本后先 `nix build .#douyin` 验证，
+      # 不必每次都重建整个系统闭包。
+      packages.${system} = bakaPkgs.bakaPackages;
+
+      # modules/ 下的功能模块按文件名导出，方便以后第二台主机直接引用。
+      # 从目录读取而不是手写清单，新增模块无需在这里登记。
+      # 注意 ghelper 模块需要调用方提供 g-helper-linux 这个 specialArg。
+      nixosModules = lib.mapAttrs' (
+        file: _type: lib.nameValuePair (lib.removeSuffix ".nix" file) (./modules + "/${file}")
+      ) (lib.filterAttrs (_file: type: type == "regular") (builtins.readDir ./modules));
 
       # 属性名与主机名一致，nixos-rebuild 会自动选择它。
       nixosConfigurations."bakaPC-NixOS" = nixosConfiguration;

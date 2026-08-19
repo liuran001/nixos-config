@@ -1,7 +1,6 @@
 # baka 的 AI 编程工具：配置、插件与运行时密钥注入集中在此文件。
 {
   lib,
-  ohMyClaudeCodeSource,
   omp,
   pkgs,
   ...
@@ -16,11 +15,10 @@ let
   oapiSecretFile = "/run/agenix/oapi-api-key";
   githubSecretFile = "/run/agenix/github-token";
 
-  aiTools = pkgs.callPackage ../../pkgs/ai-tools.nix { };
-  kimiPackage = pkgs.callPackage ../../pkgs/kimi-code.nix { };
-  ohMyClaudeCode = pkgs.callPackage ../../pkgs/oh-my-claudecode.nix {
-    src = ohMyClaudeCodeSource;
-  };
+  # 均来自 pkgs/overlay.nix；oh-my-claudecode 的源码输入在那里接线。
+  aiTools = pkgs.bakaPackages.ai-tools;
+  kimiPackage = pkgs.bakaPackages.kimi-code;
+  ohMyClaudeCode = pkgs.bakaPackages.oh-my-claudecode;
   # nix-bun upstream still reads the deprecated stdenv.isLinux/isDarwin aliases.
   # Supply plain boolean compatibility fields locally so evaluation stays quiet
   # without mutating nixpkgs globally or forking the upstream package.

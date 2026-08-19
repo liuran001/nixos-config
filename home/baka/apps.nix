@@ -1,4 +1,5 @@
 # baka 的桌面应用。
+# bakaPackages.* 来自 pkgs/overlay.nix，即仓库 pkgs/ 目录下的自封装软件包。
 { pkgs, ... }:
 
 {
@@ -9,22 +10,22 @@
     ayugram-desktop
     telegram-desktop
     feishu
-    (callPackage ../../pkgs/lark.nix { })
+    bakaPackages.lark
     wemeet
     rustdesk-flutter
     termius
 
     # 影音、音乐与直播。
-    (callPackage ../../pkgs/bilibili.nix { })
-    (callPackage ../../pkgs/douyin.nix { })
-    (callPackage ../../pkgs/open-orpheus.nix { })
-    (callPackage ../../pkgs/splayer-next.nix { })
+    bakaPackages.bilibili
+    bakaPackages.douyin
+    bakaPackages.open-orpheus
+    bakaPackages.splayer-next
     go-musicfox
     vlc
     obs-studio
 
     # 桌面工具和外观。
-    (callPackage ../../pkgs/keyguard.nix { })
+    bakaPackages.keyguard
     fastfetch
     kdePackages.filelight
     kdePackages.kate
@@ -38,7 +39,7 @@
     kdePackages.ksystemlog
     kdePackages.partitionmanager
     microsoft-edge
-    (callPackage ../../pkgs/motrix.nix { })
-    (callPackage ../../pkgs/pjsk-cursor-theme.nix { })
+    bakaPackages.motrix
+    bakaPackages.pjsk-cursor-theme
   ];
 }
