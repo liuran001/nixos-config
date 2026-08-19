@@ -43,7 +43,17 @@ symlinkJoin {
   nativeBuildInputs = [ makeWrapper ];
 
   # .desktop 里是 Exec=wechat，按 PATH 解析，因此会命中下面这个包装器。
+  # 同时修正菜单分类：上游只写了 Categories=Utility，微信会落在「实用工具」下；
+  # KDE 的「互联网」菜单对应 Network 类别。symlinkJoin 把 share 下的文件做成软链，
+  # 因此先摘掉软链再写入改过的副本。
   postBuild = ''
+    rm "$out/share/applications/wechat.desktop"
+    install -Dm444 \
+      ${wechat}/share/applications/wechat.desktop \
+      "$out/share/applications/wechat.desktop"
+    substituteInPlace "$out/share/applications/wechat.desktop" \
+      --replace-fail "Categories=Utility;" "Categories=Network;InstantMessaging;"
+
     rm "$out/bin/wechat"
     makeWrapper ${lib.getExe wechat} "$out/bin/wechat" \
       --set-default QT_IM_MODULE fcitx \
