@@ -442,6 +442,21 @@ let
     };
   };
 
+  # gpt-5.3 及以上的 OpenAI 模型上游只接受 responses 协议；obdo 网关为这些
+  # 模型配有 responses 渠道，因此按模型覆盖回 @ai-sdk/openai（其余模型仍走
+  # provider 默认的 chat/completions）。网关日后新增 gpt-5.x 时需要在这里补充。
+  obdoResponsesModels = [
+    "gpt-5.3-codex"
+    "gpt-5.4"
+    "gpt-5.4-mini"
+    "gpt-5.5"
+    "gpt-5.5-mini"
+    "gpt-5.6-luna"
+    "gpt-5.6-mini"
+    "gpt-5.6-sol"
+    "gpt-5.6-terra"
+  ];
+
   opencodeConfig = jsonFormat.generate "opencode.json" {
     model = "obdo/${defaultModel}";
     autoupdate = false;
@@ -477,10 +492,18 @@ let
     };
     provider.obdo = {
       name = "Baka API";
-      npm = "@ai-sdk/openai";
+      # 这个网关本质上是 chat/completions 网关：/v1/responses 只有少数模型
+      # （如 gpt-5.6-sol）配有渠道，gemini 系等模型走 responses 会报
+      # 「分组 auto 下模型 X 的可用渠道不存在」。AI SDK v5 的 @ai-sdk/openai
+      # 默认走 responses API，所以改用 @ai-sdk/openai-compatible，让所有模型
+      # 统一走 chat/completions；将来若有模型必须 responses，可在
+      # provider.obdo.models.<id>.provider.npm 单独覆盖回 @ai-sdk/openai。
+      npm = "@ai-sdk/openai-compatible";
       options = {
         baseURL = apiBaseUrl;
         apiKey = "{env:OPENAI_API_KEY}";
+        # createOpenAICompatible 要求 name 参数。
+        name = "bakaapi";
         # 模型列表由 opencode-models-discovery 插件从该端点动态发现，
         # 不再写死；enabled 同时是对该 provider 的强制发现开关。
         modelsDiscovery = {
@@ -492,6 +515,12 @@ let
           modelInfoFormat = "models.dev";
         };
       };
+      # 见上方 obdoResponsesModels 注释：仅这些模型覆盖回 responses 协议。
+      # 发现插件的 mergeModelOverride 是深合并，这里只写 provider.npm，
+      # 不会丢发现来的 limit/reasoning/modalities 元数据。
+      models = lib.genAttrs obdoResponsesModels (_: {
+        provider.npm = "@ai-sdk/openai";
+      });
     };
   };
 
