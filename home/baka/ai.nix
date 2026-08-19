@@ -483,7 +483,14 @@ let
         apiKey = "{env:OPENAI_API_KEY}";
         # 模型列表由 opencode-models-discovery 插件从该端点动态发现，
         # 不再写死；enabled 同时是对该 provider 的强制发现开关。
-        modelsDiscovery.enabled = true;
+        modelsDiscovery = {
+          enabled = true;
+          # /v1/models 只返回模型 id，不带上下文窗口等元数据，界面里的上下文
+          # 长度会全部显示成 0。obdo 网关的元数据接口要面板 token，拿不到，
+          # 因此改由 models.dev 按模型名补齐 limit/reasoning/modalities。
+          # models.dev 未收录的模型保持原样，不会被过滤掉。
+          modelInfoFormat = "models.dev";
+        };
       };
     };
   };
