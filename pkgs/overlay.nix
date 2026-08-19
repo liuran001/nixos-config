@@ -29,6 +29,8 @@ _final: prev: {
       src = ohMyClaudeCodeSource;
     };
     open-orpheus = prev.callPackage ./open-orpheus.nix { };
+    openchamber-desktop = prev.callPackage ./openchamber/desktop.nix { };
+    openchamber-web = prev.callPackage ./openchamber/web.nix { };
     opencode-claude-auth = prev.callPackage ./opencode-claude-auth.nix { };
     opencode-models-discovery = prev.callPackage ./opencode-models-discovery.nix { };
     pjsk-cursor-theme = prev.callPackage ./pjsk-cursor-theme.nix { };
