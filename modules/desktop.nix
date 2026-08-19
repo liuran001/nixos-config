@@ -1,6 +1,21 @@
 # 桌面环境：KDE Plasma 6、SDDM 登录管理器、蓝牙、PipeWire 音频、打印服务。
-{ ... }:
+{ pkgs, ... }:
 
+let
+  tesseractLanguages = [
+    "eng"
+    "chi_sim"
+    "chi_tra"
+    "jpn"
+    "jpn_vert"
+  ];
+  tesseractWithLanguages = pkgs.tesseract5.override {
+    enableLanguages = tesseractLanguages;
+  };
+  spectacleWithOcr = pkgs.kdePackages.spectacle.override {
+    inherit tesseractLanguages;
+  };
+in
 {
   # 让 Chromium 和 Electron 类程序优先使用原生 Wayland。
   # nixpkgs 的 Edge 启动包装器会据此自动启用 Wayland 输入法和 text-input-v3 协议。
@@ -13,6 +28,17 @@
   # 启用 SDDM 登录管理器和 KDE Plasma 6 桌面环境。
   services.displayManager.sddm.enable = true;
   services.desktopManager.plasma6.enable = true;
+  # Plasma 默认的 Spectacle 没有 OCR 语言数据；替换为中英日文 Tesseract 构建，
+  # 同时提供 tesseract 命令，便于独立识别图片和排查语言包。
+  environment.plasma6.excludePackages = [ pkgs.kdePackages.spectacle ];
+  environment.systemPackages = [
+    spectacleWithOcr
+    tesseractWithLanguages
+  ];
+  # 启用 KDE Connect，并由 NixOS 模块同时开放设备发现和传输所需的 TCP/UDP 端口。
+  programs.kdeconnect.enable = true;
+  # Plasma 和 niri 都已安装；明确首选 Plasma，SDDM 中仍可手动选择 niri。
+  services.displayManager.defaultSession = "plasma";
   # SDDM 使用 Wayland 模式（kwin 合成器），否则登录界面不会跟随屏幕缩放。
   services.displayManager.sddm.wayland = {
     enable = true;

@@ -18,8 +18,6 @@
     "fuzzel/fuzzel.ini".source = ./dotfiles/fuzzel/fuzzel.ini;
     "swaylock/config".source = ./dotfiles/swaylock/config;
 
-    "flameshot/flameshot.ini".source = ./dotfiles/flameshot/flameshot.ini;
-
     # Fcitx 5 输入法偏好；输入法组和候选窗字体由 modules/i18n.nix 管理。
     "fcitx5/conf/pinyin.conf".source = ./dotfiles/fcitx5/conf/pinyin.conf;
     "fcitx5/conf/chttrans.conf".source = ./dotfiles/fcitx5/conf/chttrans.conf;
