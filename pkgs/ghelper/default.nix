@@ -8,12 +8,151 @@
 
 let
   upstreamPackages = g-helper-linux.packages.${pkgs.stdenv.hostPlatform.system};
+  # 上游 csproj 已引用 Svg.Controls.Skia.Avalonia 12.0.0.15，但其 nixos/deps.json
+  # 仍锁 12.0.0.13（上游 master 同样未补），连带整套 Svg.Skia 5.2.1 / SkiaSharp
+  # 4.148.0 / HarfBuzzSharp 14.2.0 传递链都缺，沙箱 restore 报 NU1102。
+  # 按 nuget.org 依赖元数据补全整个闭包；fetchNupkg 直接进 buildInputs，
+  # nuget env hook 会像对待 deps.json 条目一样把它们链入 fallback。
+  # hash 来自 nuget.org 官方 nupkg。
+  # fetch-nupkg 的 SkiaSharp.NativeAssets.Linux override 会跑 autoPatchelf，
+  # 但只给了 fontconfig；4.148.0 的 .so 还需要 libstdc++。
+  skiaSharpNativeLinux =
+    (pkgs.dotnetCorePackages.fetchNupkg {
+      pname = "SkiaSharp.NativeAssets.Linux";
+      version = "4.148.0";
+      hash = "sha256-HXm+t5/1Wd16MZaYPJlMjzUkHhhJHid2mwD7MPfWbTs=";
+    }).overrideAttrs
+      (old: {
+        buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.stdenv.cc.cc.lib ];
+      });
+  harfBuzzNativeLinux = pkgs.dotnetCorePackages.fetchNupkg {
+    pname = "HarfBuzzSharp.NativeAssets.Linux";
+    version = "14.2.0";
+    hash = "sha256-fBG1Zump6wSqMkThfcd3pU7T5EL6zoZy9ZZolqhMWME=";
+  };
+  extraNugetPackages = [
+    skiaSharpNativeLinux
+    harfBuzzNativeLinux
+  ]
+  ++ map (p: pkgs.dotnetCorePackages.fetchNupkg p) [
+    {
+      pname = "Svg.Controls.Skia.Avalonia";
+      version = "12.0.0.15";
+      hash = "sha256-C0223HStSc3LdKLhReGHlvykcz2oeGUPUK8iqkhRNz0=";
+    }
+    {
+      pname = "Svg.Skia";
+      version = "5.2.1";
+      hash = "sha256-hY3lT8YK+07LwrwlINdz48MdrikZzPVaefH/LSGFPAM=";
+    }
+    {
+      pname = "Svg.Animation";
+      version = "5.2.1";
+      hash = "sha256-3gDyhbyCsIZ7E0cPT28TDrRrtp1+S1ox7yscwWTJ1zc=";
+    }
+    {
+      pname = "Svg.Custom";
+      version = "5.2.1";
+      hash = "sha256-s1yKLYfQ1Ep1efaJ9Wv9eG8X15c5BCX4dMotJUGFKbA=";
+    }
+    {
+      pname = "Svg.Model";
+      version = "5.2.1";
+      hash = "sha256-an/EGR/YeWKFRpyffhtfrdrCd5qRU9JXKPPtOzXfXio=";
+    }
+    {
+      pname = "Svg.SceneGraph";
+      version = "5.2.1";
+      hash = "sha256-lK60Laa7UH953cOSDxoQqFrcmB9LE7L9qvx3TRy2irY=";
+    }
+    {
+      pname = "ShimSkiaSharp";
+      version = "5.2.1";
+      hash = "sha256-+zSarzDbiwyk0Jdb64nIENmoR9oW0AIZAcRDfZqMZjs=";
+    }
+    {
+      pname = "SkiaSharp";
+      version = "4.148.0";
+      hash = "sha256-HbeLR5Nc3tBtOoZBSUPXFLrEsznJIj0WiGDu71mD68c=";
+    }
+    {
+      pname = "SkiaSharp.NativeAssets.Win32";
+      version = "4.148.0";
+      hash = "sha256-vy7F1FR44BqybBGx/GHw7kjIKpwuwl7BBUaCrtEz/0c=";
+    }
+    {
+      pname = "SkiaSharp.NativeAssets.macOS";
+      version = "4.148.0";
+      hash = "sha256-2IGAz4c3xV4cHw6H7kK4wWs9PELAnGmqtTRYxbLFTDA=";
+    }
+    {
+      pname = "HarfBuzzSharp";
+      version = "14.2.0";
+      hash = "sha256-cEkZAAu4L+brtdCtvKYRP6hTt10boEtfAwZBbJsiAww=";
+    }
+    {
+      pname = "HarfBuzzSharp.NativeAssets.Win32";
+      version = "14.2.0";
+      hash = "sha256-wj5Q6O56SZWo/oVFrQDssT3//6oXgX0xrDIdTmf5POM=";
+    }
+    {
+      pname = "HarfBuzzSharp.NativeAssets.macOS";
+      version = "14.2.0";
+      hash = "sha256-IpegqPf0off+ZVcc+Z8bhnjnwuyEB6XYNtUI0jFO00I=";
+    }
+  ];
   # NixOS 上的软件与系统集成都由 Flake 统一管理。上游内置更新会下载 master
   # 分支的 install.sh 并通过 pkexec 以 root 执行，内置“修复”还可能写入自己的
   # udev/sudoers 配置；因此隐藏这些入口，并在实际执行路径做防御性短路。
   # 版本检查、发行说明、BIOS 与驱动检查仍然保留。
   ghelper = upstreamPackages.ghelper.overrideAttrs (oldAttrs: {
     patches = (oldAttrs.patches or [ ]) ++ [ ./nixos-safety.patch ];
+    # buildDotnetModule 会把 dotnet-sdk 内置的 NuGet 包追加进 buildInputs
+    # （dotnet-sdk.packages）。SDK 10.0.302 内置 Microsoft.DotNet.ILCompiler 与
+    # Microsoft.NET.ILLink.Tasks 的 10.0.10，与上游 deps.json 里的条目同名同版本，
+    # configureNuget 逐包建符号链接时第二次 ln 因 File exists 中止构建。
+    # 按 包 id/版本 对全部 buildInputs 去重：同名同版本的两份是同一个 nuget.org
+    # 包，保留先出现的一份即可。去重放在追加 extraNugetPackages 之后，
+    # 这样上游 deps.json 补齐缺失条目时本地补丁自动失效。求值期完成，不引入 IFD。
+    buildInputs =
+      let
+        dedupe =
+          list:
+          (
+            lib.foldl'
+              (
+                acc: pkg:
+                let
+                  key = lib.toLower "${pkg.pname or ""}/${pkg.version or ""}";
+                in
+                if pkg ? pname && pkg ? version && builtins.hasAttr key acc.seen then
+                  acc
+                else
+                  {
+                    seen = acc.seen // {
+                      ${key} = true;
+                    };
+                    list = acc.list ++ [ pkg ];
+                  }
+              )
+              {
+                seen = { };
+                list = [ ];
+              }
+              list
+          ).list;
+      in
+      dedupe (oldAttrs.buildInputs ++ extraNugetPackages);
+    # fallback 里同时存在新旧两套 SkiaSharp/HarfBuzzSharp 原生库（Avalonia 链
+    # 3.119.4 / 8.3.1.3 与 Svg.Skia 链 4.148.0 / 14.2.0），上游 postInstall 用
+    # find -print -quit 取首个匹配，遍历顺序不保证版本。托管程序集按“最高版本
+    # 获胜”解析到 4.148.0 / 14.2.0，这里把同版本的原生 .so 显式覆盖到输出目录。
+    postInstall = (oldAttrs.postInstall or "") + ''
+      install -m755 ${skiaSharpNativeLinux}/share/nuget/packages/skiasharp.nativeassets.linux/4.148.0/runtimes/linux-x64/native/libSkiaSharp.so \
+        $out/lib/ghelper/libSkiaSharp.so
+      install -m755 ${harfBuzzNativeLinux}/share/nuget/packages/harfbuzzsharp.nativeassets.linux/14.2.0/runtimes/linux-x64/native/libHarfBuzzSharp.so \
+        $out/lib/ghelper/libHarfBuzzSharp.so
+    '';
     preBuild = (oldAttrs.preBuild or "") + ''
       # Keep the embedded recovery copy identical to the audited NixOS helper.
       rm -f vendor/gpu-helper/gpu-helper
