@@ -16,6 +16,19 @@
 #    bwrap 会绑定整个 /nix，因此 store 路径在沙箱内可直接访问；
 #    fcitx5-gtk 与 FHS 环境里的 GTK 3 来自同一份 nixpkgs，ABI 一致。
 #
+# 三、界面过小、笔画过细：微信是 XWayland 上的 X11 窗口，而 KWin 给 XWayland
+#    的是显示器原生分辨率（本机 2560x1600、缩放 1.25），要求程序自己放大，
+#    只通过 X 资源 Xft.dpi=120 传递缩放。微信没有开启任何 Qt 缩放，于是按 1x
+#    绘制，实际只有应有尺寸的 80%。QT_AUTO_SCREEN_SCALE_FACTOR 让 Qt 5 读取
+#    Xft.dpi 自行缩放，RoundingPolicy=PassThrough 保留 1.25 这类分数倍率
+#    （Qt 5 默认会四舍五入到 1，等于不生效）。这样取值来自屏幕而非写死，
+#    换显示器或改缩放都不用改这里。
+#
+#    注意字重本身改不了：微信把汉仪「WeChat Sans」的 Light 字重打进了 Qt
+#    资源（二进制里可见 :gui/fonts/WeChatSansSS/WeChatSansSS-Light.ttf），
+#    由 QFontDatabase 从资源加载，fontconfig 无法替换。这里只能让它按正确
+#    尺寸渲染，笔画随之变粗，但无法把 Light 换成 Regular。
+#
 # modules/i18n.nix 使用 Wayland 原生输入法前端，有意不设置全局 QT_IM_MODULE
 # 和 GTK_IM_MODULE（避免干扰原生 Wayland 程序），所以这些变量只在这里、
 # 只对微信生效。用 --set-default 便于临时改成 ibus 等值排查
@@ -56,6 +69,8 @@ symlinkJoin {
 
     rm "$out/bin/wechat"
     makeWrapper ${lib.getExe wechat} "$out/bin/wechat" \
+      --set-default QT_AUTO_SCREEN_SCALE_FACTOR 1 \
+      --set-default QT_SCALE_FACTOR_ROUNDING_POLICY PassThrough \
       --set-default QT_IM_MODULE fcitx \
       --set-default GTK_IM_MODULE fcitx \
       --set-default GTK_IM_MODULE_FILE ${gtk3ImmodulesCache} \
