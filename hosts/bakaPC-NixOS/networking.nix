@@ -14,6 +14,8 @@
 
   # 启用 NetworkManager，用于管理有线网络、Wi-Fi、VPN 等；KDE 系统托盘会提供图形界面。
   networking.networkmanager.enable = true;
+  # 启用 Tailscale 组网服务。
+  services.tailscale.enable = true;
 
   # NixOS 默认启用防火墙。服务器程序需要从其他设备访问时，可在这里开放对应的 TCP 或 UDP 端口。
   # networking.firewall.allowedTCPPorts = [ ... ];
