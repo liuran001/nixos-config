@@ -28,4 +28,7 @@ in
 {
   "github-token.age".publicKeys = recipients;
   "oapi-api-key.age".publicKeys = recipients;
+  # pam_u2f 的凭据映射。内容是凭据句柄与公钥，本身不是机密（没有硬件私钥
+  # 无法验证），但本仓库是公开的，加密存放可避免公开一个稳定的设备标识。
+  "u2f-mappings.age".publicKeys = recipients;
 }

@@ -1,0 +1,36 @@
+# YubiKey 免密验证（FIDO2 / pam_u2f）：覆盖 sudo、图形提权、登录与锁屏。
+#
+# 凭据由 pamu2fcfg 在本机注册，策略为 +presence：只要求物理触摸，不要求
+# FIDO2 PIN。这意味着钥匙插在机器上时，任何能碰到键盘的人都能提权和登录——
+# 相当于把凭据从「知道密码」换成了「物理在场」。离开时应拔下钥匙。
+{ config, ... }:
+
+{
+  security.pam.u2f = {
+    enable = true;
+
+    # sufficient：验证通过即放行，失败则继续走密码。
+    # 不用 required：那会让「没插钥匙」变成无法登录，映射文件一旦出问题就把
+    # 自己锁在系统外；agenix 解密失败时也能靠密码进得去。
+    control = "sufficient";
+
+    settings = {
+      # 映射由 agenix 解密到 /run/agenix（见 secrets.nix），不放明文进公开仓库。
+      authfile = config.age.secrets.u2f-mappings.path;
+      # 提示「请触摸」，否则终端会静默等待，看起来像卡死。
+      cue = true;
+      # 必须与注册时 pamu2fcfg 的 -o/-i 完全一致，显式固定而不依赖主机名解析。
+      origin = "pam://bakaPC-NixOS";
+      appid = "pam://bakaPC-NixOS";
+    };
+  };
+
+  # security.pam.u2f.enable 会成为所有 PAM 服务的默认值，因此 sudo、polkit-1、
+  # sddm、kde（Plasma 锁屏）、login、swaylock 都已自动覆盖，无需逐个声明。
+  # 但修改凭据本身的服务不接受「摸一下」代替「知道当前密码」。
+  security.pam.services = {
+    passwd.u2f.enable = false;
+    chpasswd.u2f.enable = false;
+    chsh.u2f.enable = false;
+  };
+}

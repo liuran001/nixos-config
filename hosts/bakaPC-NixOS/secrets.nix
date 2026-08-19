@@ -18,6 +18,15 @@
       group = "users";
       mode = "0400";
     };
+    # pam_u2f 的凭据映射，见 authentication.nix。属主是 baka 而不是 root：
+    # sudo、SDDM、锁屏的 PAM 栈以 root 读取（root 不受权限限制），
+    # 而 swaylock 在 niri 会话里以 baka 自己的身份运行，也需要读到它。
+    secrets.u2f-mappings = {
+      file = ../../secrets/u2f-mappings.age;
+      owner = "baka";
+      group = "users";
+      mode = "0400";
+    };
   };
 
   # 第二收件人使用 YubiKey 的 PIV 槽位（见 secrets/secrets.nix）。

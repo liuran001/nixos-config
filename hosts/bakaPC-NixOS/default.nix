@@ -9,6 +9,7 @@
   imports = [
     # 本机专属配置。
     ./hardware-configuration.nix
+    ./authentication.nix
     ./boot.nix
     ./display.nix
     ./graphics.nix

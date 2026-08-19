@@ -166,6 +166,46 @@ GitHub token 只注入 `gh`，用于 GitHub API 和 CLI 认证；Git 拉取与�
 初始令牌曾通过交互渠道传递，应视为已经暴露：部署完成后在 GitHub 撤销旧令牌，生成新令牌，
 再用 `agenix -e github-token.age` 更新密文。可用 `gh auth status` 验证身份，不要打印令牌本身。
 
+### YubiKey 免密验证
+
+[`authentication.nix`](hosts/bakaPC-NixOS/authentication.nix) 用 pam_u2f（FIDO2）
+让 YubiKey 替代密码，覆盖 `sudo`、图形提权（polkit）、SDDM 登录、Plasma 锁屏与 swaylock。
+`security.pam.u2f.enable` 会成为所有 PAM 服务的默认值，因此上述场景自动生效；
+只有修改凭据本身的 `passwd`、`chpasswd`、`chsh` 显式关闭——摸一下钥匙不应该
+等于知道当前密码。
+
+`control = "sufficient"`：验证通过即放行，失败则继续走密码。**不要改成 `required`**，
+那会让「没插钥匙」变成无法登录，映射文件或 agenix 解密一旦出问题就把自己锁在系统外。
+
+凭据映射由 agenix 加密存放（`secrets/u2f-mappings.age`），解密到 `/run/agenix`。
+属主是 baka 而非 root：sudo、SDDM、锁屏的 PAM 栈以 root 读取（root 不受权限限制），
+而 swaylock 在 niri 会话里以 baka 身份运行，也要能读到。
+
+注册新钥匙或换钥匙时（注册需要 FIDO2 PIN，之后验证只需触摸）：
+
+```bash
+pamu2fcfg -u baka -o pam://bakaPC-NixOS -i pam://bakaPC-NixOS \
+  > /run/user/1000/u2f-mapping.txt
+```
+
+`-o` / `-i` 必须与 `authentication.nix` 里的 `origin` / `appid` 完全一致。
+多把钥匙时把各行合并（pam_u2f 用 `:` 分隔多个凭据），再加密替换密文：
+
+```bash
+cd ~/nixos
+age -R <(nix-instantiate --eval --strict --json -E 'import ./secrets/secrets.nix' \
+  | jq -r '."u2f-mappings.age".publicKeys[]') \
+  -o secrets/u2f-mappings.age /run/user/1000/u2f-mapping.txt
+```
+
+安全边界要清楚：当前策略是 `+presence`，只要求物理触摸，不要求 PIN。钥匙插在
+机器上时，任何能碰到键盘的人都能提权和登录——凭据从「知道密码」变成了「物理在场」，
+离开时应当拔下钥匙。若想改成触摸加 PIN，在 `settings` 里加 `pinverification = 1`
+并用 `pamu2fcfg -P` 重新注册。
+
+另外，不输密码登录时 KWallet 与 gnome-keyring 拿不到登录密码来解锁，
+会在会话内单独弹窗要密码。
+
 ## Waydroid、GMS 与 KernelSU
 
 [`modules/virtualisation.nix`](modules/virtualisation.nix) 启用了 Waydroid，并让
