@@ -14,16 +14,15 @@
       "locked": {
         "lastModified": 1770165109,
         "narHash": "sha256-9VnK6Oqai65puVJ4WYtCTvlJeXxMzAp/69HhQuTdl/I=",
-        "ref": "refs/heads/main",
+        "owner": "ryantm",
+        "repo": "agenix",
         "rev": "b027ee29d959fda4b60b57566d64c98a202e0feb",
-        "revCount": 359,
-        "type": "git",
-        "url": "https://github.com/ryantm/agenix.git"
+        "type": "github"
       },
       "original": {
-        "rev": "b027ee29d959fda4b60b57566d64c98a202e0feb",
-        "type": "git",
-        "url": "https://github.com/ryantm/agenix.git"
+        "owner": "ryantm",
+        "repo": "agenix",
+        "type": "github"
       }
     },
     "bun2nix": {
@@ -90,7 +89,6 @@
       "original": {
         "owner": "ilysenko",
         "repo": "codex-desktop-linux",
-        "rev": "1875dc2eaab6f9448617d18d0eda58902edf0f1a",
         "type": "github"
       }
     },
@@ -254,11 +252,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1786943417,
-        "narHash": "sha256-b4qgjdFtlz5TAZ1Hi7DFJeqX3sjaDUnrwr9OO+O1rM0=",
+        "lastModified": 1787042014,
+        "narHash": "sha256-lgnV/xeEatfEnPZG0RrXS0fhcr63p3tsVvL1GdaVkJQ=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "0dd31db7e6dbf9ce05697c4545f6fe01accec994",
+        "rev": "c69ae8fb8faeb3472fd11234ba55a70ac3601f9b",
         "type": "github"
       },
       "original": {
@@ -280,17 +278,16 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1787042050,
-        "narHash": "sha256-PqPEUz6uAYyxLupt0QZbX9rvY1UpyGPObeQHgx3SAjU=",
+        "lastModified": 1787093810,
+        "narHash": "sha256-Bj4ZaL8/Wdsxf1lB/k9JFC/vKERZKmm6OP3qICIZK1E=",
         "owner": "can1357",
         "repo": "oh-my-pi",
-        "rev": "8500092296621a6826b7136e840f8a59ea338958",
+        "rev": "565d53515b54df32fada2564d1fe9caf1a17b738",
         "type": "github"
       },
       "original": {
         "owner": "can1357",
         "repo": "oh-my-pi",
-        "rev": "8500092296621a6826b7136e840f8a59ea338958",
         "type": "github"
       }
     },

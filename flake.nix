@@ -15,20 +15,20 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # age 加密的声明式秘密管理；固定提交并复用本仓库的 nixpkgs/Home Manager。
+    # age 加密的声明式秘密管理；跟随上游更新并复用本仓库的 nixpkgs/Home Manager。
     agenix = {
-      url = "git+https://github.com/ryantm/agenix.git?rev=b027ee29d959fda4b60b57566d64c98a202e0feb";
+      url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
     };
 
-    # Codex Desktop 的社区 Nix 封装；固定提交以避免上游 main 变动造成不可复现构建。
-    # 保留它自己的 nixpkgs 锁定版本，因为封装会审计并修补官方 Electron 二进制。
-    codex-desktop-linux.url = "github:ilysenko/codex-desktop-linux/1875dc2eaab6f9448617d18d0eda58902edf0f1a";
+    # Codex Desktop 的社区 Nix 封装；跟随上游 main。
+    # flake.lock 仍保留可复现快照，运行 `nix flake update` 时再前进到最新提交。
+    codex-desktop-linux.url = "github:ilysenko/codex-desktop-linux";
 
-    # Oh My Pi 自带 Home Manager 模块；固定提交并复用本仓库的 nixpkgs。
+    # Oh My Pi 自带 Home Manager 模块；跟随上游并复用本仓库的 nixpkgs。
     omp = {
-      url = "github:can1357/oh-my-pi/8500092296621a6826b7136e840f8a59ea338958";
+      url = "github:can1357/oh-my-pi";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
