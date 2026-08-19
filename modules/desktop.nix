@@ -21,6 +21,12 @@ in
   # nixpkgs 的 Edge 启动包装器会据此自动启用 Wayland 输入法和 text-input-v3 协议。
   environment.sessionVariables.NIXOS_OZONE_WL = "1";
 
+  # sudo 的图形化密码回退。sudo 的 PAM 栈先走 YubiKey 触摸（pam_u2f），失败后才
+  # 轮到密码；在没有终端可用的调用方（AI agent、脚本、systemd 服务）里密码无法
+  # 从 stdin 读取，设置 SUDO_ASKPASS 后 sudo 会改用 ksshaskpass 弹窗询问。
+  # 终端内的交互式 sudo 行为不变。
+  environment.sessionVariables.SUDO_ASKPASS = "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";
+
   # 启用 X11 图形服务，以保留 Plasma (X11) 登录会话；当前使用的 Plasma Wayland 会话不受影响。
   # 如果以后确认只使用 Wayland，可以测试关闭此选项；新手建议先保持启用。
   services.xserver.enable = true;
@@ -39,6 +45,7 @@ in
     # 它与内置的“应用程序”搜索项并存，两者会给出重复结果；
     # 如需只保留拼音版，在系统设置 → 搜索 → Plasma 搜索里关掉内置那一项。
     pkgs.bakaPackages.krunner-pinyin-search
+    pkgs.kdePackages.ksshaskpass # sudo 的图形密码弹窗（配合上方 SUDO_ASKPASS）
   ];
   # 启用 KDE Connect，并由 NixOS 模块同时开放设备发现和传输所需的 TCP/UDP 端口。
   programs.kdeconnect.enable = true;
