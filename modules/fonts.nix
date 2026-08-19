@@ -12,6 +12,9 @@
       wqy_microhei # 文泉驿微米黑。
       liberation_ttf # 与 Arial / Times New Roman / Courier New 度量兼容的自由字体。
       dejavu_fonts # DejaVu 通用字体，许多程序的默认等宽/西文字体。
+      # 补齐 Nerd Font 图标（分支、箭头、文件类型），供终端提示符 powerlevel10k
+      # 和 eza --icons 使用；缺了它们只会显示成方框。见 home/baka/shell.nix。
+      nerd-fonts.jetbrains-mono
     ];
 
     # 各字体族的默认优先级：西文在前，中文回退到思源黑体/宋体。
@@ -26,6 +29,8 @@
         "Noto Serif CJK SC"
       ];
       monospace = [
+        # 放在最前，让 alacritty、Konsole 等跟随 monospace 的程序直接拿到图标字体。
+        "JetBrainsMono Nerd Font"
         "DejaVu Sans Mono"
         "Noto Sans Mono CJK SC"
       ];
