@@ -1,7 +1,8 @@
 # NixOS 配置
 
-`bakaPC-NixOS` 的单机 Flake 配置，包含 KDE Plasma、niri、Home Manager、
-NVIDIA PRIME、蓝牙、Btrfs、Waydroid 和 AI 开发工具等设置。
+`bakaPC-NixOS` 的单机 Flake 配置，系统跟随 `nixos-unstable`，Home Manager
+跟随主线；包含 KDE Plasma、niri、NVIDIA PRIME、蓝牙、Btrfs、Waydroid、
+G-Helper 和 AI 开发工具等设置。
 
 ## 目录
 
@@ -12,7 +13,8 @@ NVIDIA PRIME、蓝牙、Btrfs、Waydroid 和 AI 开发工具等设置。
 ├── home/
 │   └── baka/               # baka 的 Home Manager 配置和 dotfiles
 ├── modules/                # 可复用于其他主机的 NixOS 功能模块
-├── pkgs/                   # 尚未进入 nixpkgs 的本地软件包
+├── pkgs/                   # 外部发行包和需要本地适配的软件
+│   └── ghelper/             # G-Helper 包装、NixOS 适配和安全补丁
 ├── secrets/                # agenix 密文与公开 recipient 规则
 ├── flake.nix               # Flake 输入、主机输出、格式器与检查
 └── flake.lock              # 锁定依赖版本
@@ -157,13 +159,50 @@ x86_64/新内核组合存在兼容性与稳定性风险。本仓库不会把未�
 激活项 `kdeTouchpadNaturalScroll` 精确写入该设备的 KWin/libinput 配置，不会反转外接鼠标滚轮。
 更换触摸板或设备 ID 变化后，需要同步更新文件中的设备组。
 
+## 截图与 OCR
+
+Plasma 默认的 Spectacle 已替换为带 Tesseract OCR 的构建，支持英文、简体中文、繁体中文、
+日语横排和日语竖排（`eng`、`chi_sim`、`chi_tra`、`jpn`、`jpn_vert`）。系统也提供
+`tesseract` 命令行工具；Flameshot 及其 Home Manager 配置已移除。日语只用于图片文字识别，
+不会给 Fcitx 添加日文输入法，也不会改变系统或 KDE 的界面语言。
+
+## G-Helper
+
+[`pkgs/ghelper/default.nix`](pkgs/ghelper/default.nix) 负责包装 G-Helper 上游 `master` 的源码，
+具体提交由 `flake.lock` 记录；[`modules/ghelper.nix`](modules/ghelper.nix) 只负责 NixOS 系统
+集成。没有导入上游 NixOS 模块中的 `NOPASSWD` sudo 规则，也没有采用把设备节点
+设为 `0666` 的宽松规则：风扇、功耗、充电阈值和 ASUS 外设节点只允许 `root`、当前 seat 或
+`ghelper` 组访问；GPU helper 需要时通过 Polkit 交互认证。
+
+本机 FX608LM 的 ASUS WMI、MUX、Dynamic Boost、CPU/GPU 功耗限制和两组 8 点风扇曲线均可由
+当前内核暴露给 G-Helper。首次部署后需要注销并重新登录，让新增的 `ghelper`、`input` 组生效，
+然后从应用菜单启动 G-Helper。NVIDIA PRIME 的显示路径和驱动仍由 NixOS 管理；G-Helper 仅使用
+ASUS WMI 后端，不创建 modprobe 黑名单或额外 udev 规则。经 Polkit 确认的 GPU 模式保存在
+`/var/lib/ghelper-nixos`，由 `ghelper-apply-state` 在开机时校验 MUX、设备占用和驱动状态后安全恢复；
+不满足条件时保留待处理状态而不会强制关闭独显。
+G-Helper 的 NixOS 内置更新和系统文件修复入口也在构建阶段禁用，避免它下载并以 root
+执行上游安装脚本，或另行写入 udev/sudoers 配置；软件与系统集成只通过本仓库的
+`flake.lock` 和 NixOS 重建更新。
+
 ## 更新与回退
+
+系统、驱动和 nixpkgs 内的软件跟随 `nixos-unstable`，Home Manager、G-Helper、
+Oh My Pi 与 Oh My ClaudeCode 等输入跟随各自上游分支。`flake.lock` 不是禁止更新的版本钉死，
+而是一次可验证、可回退的依赖快照；每次执行更新命令时会整体前进到当时的最新提交：
 
 ```bash
 nix flake update
 git diff -- flake.lock
 nix flake check --no-write-lock-file --show-trace
 ```
+
+QQ 等已由 nixpkgs 维护的软件直接使用滚动包。`.deb`、AppImage、官方二进制和 npm 依赖仍必须
+保留版本、hash 或 lockfile，否则 Nix 无法验证下载内容；这些固定值在上游发布新版本时随配置
+一起更新。应用内自更新保持关闭，因为 Nix store 只读，绕过 Nix 更新会产生两套相互冲突的安装。
+`system.stateVersion` 与 `home.stateVersion` 只控制数据迁移兼容性，不代表软件版本，不随滚动频道修改。
+
+`nix build`、`nixos-rebuild build` 生成的 `result`/`result-*` 只是指向 Nix store 的临时符号链接，
+已由 `.gitignore` 排除，不需要放进仓库。
 
 更新通过后再 test、boot 或 switch。当前系统异常时可运行
 `nixos-rebuild switch --rollback --sudo`；无法进入桌面时，从 GRUB 选择较早的 NixOS 代际。
