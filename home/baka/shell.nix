@@ -13,8 +13,15 @@ in
 {
   programs.git = {
     enable = true;
-    # 不声明姓名和邮箱，让每个仓库自行决定提交身份。
-    settings.init.defaultBranch = "main";
+    settings = {
+      init.defaultBranch = "main";
+      # 全局提交身份。个别仓库要用别的身份时，在那个仓库里跑
+      # `git config --local user.email ...` 覆盖即可。
+      user = {
+        name = "liuran001";
+        email = "bdovo@bdovo.cc";
+      };
+    };
   };
 
   programs.bash = {
