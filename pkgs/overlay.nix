@@ -17,6 +17,8 @@ _final: prev: {
     kimi-code = prev.callPackage ./kimi-code.nix { };
     # 用 kdePackages.callPackage，让 KF6 与 Qt 6 的依赖直接从 KDE 包集里解析。
     krunner-pinyin-search = prev.kdePackages.callPackage ./krunner-pinyin-search.nix { };
+    # 去掉上游 .desktop 的 X-KDE-SubstituteUID，否则 Plasma 菜单点击无反应。
+    ksystemlog = prev.callPackage ./ksystemlog.nix { };
     lark = prev.callPackage ./lark.nix { };
     # KernelSU 模块本身要按内核版本编译，只能在 modules/virtualisation.nix 里
     # 用 boot.kernelPackages.callPackage；加载器不依赖内核，放在这里方便单独构建。

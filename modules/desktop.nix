@@ -49,6 +49,11 @@ in
   ];
   # 启用 KDE Connect，并由 NixOS 模块同时开放设备发现和传输所需的 TCP/UDP 端口。
   programs.kdeconnect.enable = true;
+  # KDE 分区管理器必须走系统模块，不能只在 home-manager 里装包：分区操作要靠
+  # kpmcore 的 kpmcore_externalcommand helper 提权，而 polkit 只读
+  # /run/current-system/sw/share/polkit-1/actions，D-Bus 系统服务同理。
+  # 缺了这一层时界面能打开，但读不到任何磁盘、所有操作项灰掉。
+  programs.partition-manager.enable = true;
   # 系统切换若恰好撞上 fwupd 的小时刷新，旧 generation 的客户端可能先于
   # daemon-reload 启动。失败后用新加载的 unit 自动重试，避免 switch 因竞态报错。
   systemd.services.fwupd-refresh.serviceConfig = {

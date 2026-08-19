@@ -20,6 +20,7 @@
     bakaPackages.douyin
     bakaPackages.open-orpheus
     bakaPackages.splayer-next
+    bakaPackages.openchamber-desktop
     go-musicfox
     vlc
     obs-studio
@@ -39,8 +40,9 @@
     kdePackages.kleopatra
     kdePackages.kmousetool
     kdePackages.kompare
-    kdePackages.ksystemlog
-    kdePackages.partitionmanager
+    bakaPackages.ksystemlog # 去掉 X-KDE-SubstituteUID，否则 Plasma 菜单点击无反应
+    # partitionmanager 不在这里装：见 modules/desktop.nix 的
+    # programs.partition-manager.enable，它同时提供提权所需的 polkit 与 D-Bus 配置。
     microsoft-edge
     bakaPackages.motrix
     bakaPackages.pjsk-cursor-theme

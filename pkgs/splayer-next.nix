@@ -29,8 +29,10 @@ appimageTools.wrapType2 {
   extraPkgs = _pkgs: [ (lib.getBin util-linux) ];
 
   extraInstallCommands = ''
+    # 不要设置 PORTABLE_EXECUTABLE_DIR：主进程一旦读到它，就会在该目录下
+    # mkdir "UserData" 并把 Electron 的 userData 指过去。指向只读的 store 路径
+    # 会让启动立刻 ENOENT 崩溃。留空时应用走非便携模式，数据落在 ~/.config/<appName>。
     wrapProgram "$out/bin/${pname}" \
-      --set PORTABLE_EXECUTABLE_DIR "$out" \
       --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true --wayland-text-input-version=3}}"
 
     install -Dm444 "${appimageContents}/top.imsyy.splayer_next.desktop" \
