@@ -24,6 +24,8 @@
   # agenix 0.15 内部调用上游 age，而 age 会在 PATH 中查找 age-plugin-* 可执行文件，
   # 因此插件必须装进系统环境，agenix 才能加密给 age1yubikey1... 收件人。
   environment.systemPackages = with pkgs; [
+    # agenix 自带 age，但恢复流程要直接调用它，因此单独装一份到系统环境。
+    age
     age-plugin-yubikey # age 的 YubiKey PIV 插件，提供 --generate/--list/--identity
     yubikey-manager # ykman，用于查看槽位、设置 PIN/PUK
   ];

@@ -14,7 +14,7 @@ let
   # 注意：不要把 YubiKey 写进 age.identityPaths。解密发生在系统激活期，
   # 那时无人可以按触摸键，开机会直接卡住。它只用于手工恢复。
   # 另外 age 不支持 FIDO2 形式的 sk-ssh-ed25519 密钥，必须走这里的 PIV 方案。
-  yubikey = null;
+  yubikey = "age1yubikey1qw0eylfgr6xagvy4z8mt73q8jwgrvvdekx7u6jmrndpykthujm9q5dtld54";
 
   recipients =
     if yubikey == null then

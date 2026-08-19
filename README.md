@@ -157,7 +157,8 @@ age -d -i /run/user/1000/yubikey-identity.txt secrets/oapi-api-key.age
   那时没有人能按触摸键，开机会直接卡住；它只用于手工恢复。
 - age 不支持 FIDO2 形式的 `sk-ssh-ed25519` 密钥，必须走 PIV 方案。
 - PIV 依赖 PC/SC，`services.pcscd` 已在 [`hosts/bakaPC-NixOS/secrets.nix`](hosts/bakaPC-NixOS/secrets.nix) 中启用。
-- agenix 内部调用上游 `age`，它按 PATH 查找 `age-plugin-*`，因此插件装在系统环境里。
+- agenix 内部调用上游 `age`，它按 PATH 查找 `age-plugin-*`，因此插件装在系统环境里；
+  `age` 本身也单独装了一份，上面的恢复命令才能直接调用。
 - baka 的 SSH 私钥仍应离线备份一份；两个收件人同时丢失依然不可恢复。
 
 GitHub token 只注入 `gh`，用于 GitHub API 和 CLI 认证；Git 拉取与推送仍走 SSH，
