@@ -45,6 +45,7 @@
     # programs.partition-manager.enable，它同时提供提权所需的 polkit 与 D-Bus 配置。
     microsoft-edge
     bakaPackages.motrix
+    bakaPackages.openchamber-desktop
     bakaPackages.pjsk-cursor-theme
   ];
 }
