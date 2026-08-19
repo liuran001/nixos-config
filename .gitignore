@@ -4,3 +4,5 @@ result-*
 
 # oh-my-claudecode 的会话、状态与项目记忆，属于本机运行时数据
 .omc/
+.omo/
+squashfs-root/
