@@ -12,8 +12,10 @@
     useOSProber = true;
     # 默认启动上次选择的系统（比如上次进了 Windows，这次还进 Windows）。
     default = "saved";
-    # 启动菜单只展示最近 10 个 NixOS 代际；旧代际仍按 nix.gc 策略保留。
-    configurationLimit = 10;
+    # /boot 是 500 MiB 的 ESP，而每个代际的内核加 initrd 约 58 MiB。
+    # 上限必须留出余量，否则内核升级时会在拷贝阶段撞上 ENOSPC。
+    # 旧代际本身仍按 nix.gc 策略保留，只是不再出现在启动菜单里。
+    configurationLimit = 5;
     # 高分屏下放大 GRUB 菜单字体。默认的 unicode.pf2 位图字体无法缩放，
     # 必须换成 TTF 字体，fontSize 才会生效。
     font = "${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSansMono.ttf";
@@ -26,4 +28,8 @@
 
   # 使用当前 nixpkgs 提供的最新内核系列；如果以后遇到驱动兼容问题，可删除此行以使用默认稳定内核。
   boot.kernelPackages = pkgs.linuxPackages_latest;
+
+  # /tmp 位于 Btrfs 根上，不会自动清空；每次启动清理构建残留。
+  # 不用 tmpfs：Nix 会在 /tmp 里构建大包，占满内存比占磁盘更危险。
+  boot.tmp.cleanOnBoot = true;
 }
