@@ -13,11 +13,11 @@
 
 stdenvNoCC.mkDerivation rec {
   pname = "douyin";
-  version = "8.1.201";
+  version = "8.3.0";
 
   src = fetchurl {
     url = "https://github.com/kota-rina3/hokeshi/releases/download/douyin${version}/com.douyin.otohime_${version}_amd64.deb";
-    hash = "sha256-ms8sSAUmlfccU0G+tBDbYTsAK/VtzP8haNrzIoInyVM=";
+    hash = "sha256-chAraILGu4G3cyYYV26kLxPKu0E1QSZnHjGfN5qkpAY=";
   };
 
   nativeBuildInputs = [
