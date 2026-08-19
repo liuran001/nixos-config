@@ -73,6 +73,29 @@ let
       '';
     };
 
+  # --plugin-dir 只是主命令的选项，子命令的解析器不认它，会把取值当成多余的
+  # 位置参数报 "Unknown argument"（例如 `claude rc`）。因此只在主命令上注入。
+  # 列表取自 `claude --help` 的 Commands 段，另加隐藏的 remote-control/rc。
+  claudeSubcommands = [
+    "agents"
+    "auth"
+    "auto-mode"
+    "doctor"
+    "gateway"
+    "import"
+    "install"
+    "mcp"
+    "plugin"
+    "plugins"
+    "project"
+    "rc"
+    "remote-control"
+    "setup-token"
+    "ultrareview"
+    "update"
+    "upgrade"
+  ];
+
   # Claude 使用官方账号登录；这里只加载 Oh My ClaudeCode 插件，不注入第三方
   # API 密钥、端点或模型环境变量。
   claudeWithPlugin = pkgs.writeShellApplication {
@@ -85,6 +108,13 @@ let
         ANTHROPIC_DEFAULT_HAIKU_MODEL ANTHROPIC_DEFAULT_OPUS_MODEL \
         ANTHROPIC_DEFAULT_SONNET_MODEL ANTHROPIC_SMALL_FAST_MODEL \
         CLAUDE_CODE_SUBAGENT_MODEL
+
+      case "''${1-}" in
+        ${lib.concatStringsSep " | " claudeSubcommands})
+          exec ${lib.getExe pkgs.claude-code} "$@"
+          ;;
+      esac
+
       exec ${lib.getExe pkgs.claude-code} \
         --plugin-dir ${ohMyClaudeCode}/share/oh-my-claudecode \
         "$@"
