@@ -21,11 +21,10 @@
     options = "--delete-older-than 30d";
   };
   # 通过硬链接去重 store 中的相同文件，节省磁盘空间。
-  nix.settings.auto-optimise-store = true;
-
-  # stateVersion 是有状态数据格式的兼容基线，例如部分服务的数据目录和数据库版本。
-  # 它不是当前安装的 NixOS 版本；正常升级系统时也不要随版本号一起修改。
-  # 通常应永久保留首次安装系统时的值。随意提高它可能触发不可逆的数据迁移。
-  # 修改前务必阅读 `man configuration.nix` 中 system.stateVersion 的说明。
-  system.stateVersion = "26.05"; # 本机首次安装时使用的 NixOS 版本。
+  # 用定时任务而不是 auto-optimise-store：后者会给每一次构建都加一遍
+  # 全量去重开销，而这里每周集中做一次，效果相同且不拖慢日常重建。
+  nix.optimise = {
+    automatic = true;
+    dates = [ "weekly" ];
+  };
 }
