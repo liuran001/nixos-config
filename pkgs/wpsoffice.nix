@@ -35,6 +35,15 @@ symlinkJoin {
       makeWrapper "${wpsoffice-cn}/bin/$entry" "$out/bin/$entry" \
         --set-default QT_IM_MODULE fcitx
     done
+
+    for desktopFile in "$out"/share/applications/*.desktop; do
+      sourceFile=$(readlink -f "$desktopFile")
+      rm "$desktopFile"
+      install -Dm444 "$sourceFile" "$desktopFile"
+      sed -i \
+        's/^Categories=.*/Categories=Office;WordProcessor;Spreadsheet;Presentation;/' \
+        "$desktopFile"
+    done
   '';
 
   inherit (wpsoffice-cn) meta;
