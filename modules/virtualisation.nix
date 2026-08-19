@@ -1,5 +1,10 @@
 # Docker 与 Waydroid 容器运行时。
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   kernel = config.boot.kernelPackages.kernel;
@@ -44,6 +49,25 @@ let
     set -eu
     echo "Installing KernelSU manager into Waydroid..."
     exec ${waydroidPackage}/bin/waydroid app install ${kernelsuManagerApk}
+  '';
+
+  # Android 侧的行为开关。waydroid prop set 只改运行时属性，写在这里的会经由
+  # waydroid.cfg 的 [properties] 展开进 waydroid_base.prop，容器每次启动都带上。
+  waydroidProperties = {
+    # 让每个 Android 应用各自开一个 Wayland 窗口，交给 Plasma 管理，
+    # 而不是全部挤在 waydroid show-full-ui 那一块全屏画布里。
+    "persist.waydroid.multi_windows" = "true";
+  };
+
+  waydroidSyncProps = pkgs.writeShellScript "waydroid-sync-props" ''
+    set -eu
+
+    # 还没初始化就什么都别做，交给 waydroid-gapps-init。
+    [ -s /var/lib/waydroid/waydroid.cfg ] || exit 0
+
+    exec ${pkgs.python3}/bin/python3 ${./waydroid/sync-props.py} \
+      ${waydroidPackage}/bin/waydroid \
+      ${lib.escapeShellArgs (lib.mapAttrsToList (name: value: "${name}=${value}") waydroidProperties)}
   '';
 
   waydroidGappsInit = pkgs.writeShellScript "waydroid-gapps-init" ''
@@ -113,6 +137,21 @@ in
         RemainAfterExit = true;
         TimeoutStartSec = "30min";
         ExecStart = waydroidGappsInit;
+      };
+    };
+
+    # 属性变了要重新生成 waydroid_base.prop，这一步必须在容器起来之前完成。
+    waydroid-props = {
+      description = "Apply declarative Waydroid properties";
+      requires = [ "waydroid-gapps-init.service" ];
+      after = [ "waydroid-gapps-init.service" ];
+      before = [ "waydroid-container.service" ];
+      requiredBy = [ "waydroid-container.service" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = waydroidSyncProps;
       };
     };
 
