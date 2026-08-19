@@ -32,5 +32,20 @@
     passwd.u2f.enable = false;
     chpasswd.u2f.enable = false;
     chsh.u2f.enable = false;
+
+    # KWallet 免弹窗解锁。pam_kwallet5 默认在 auth 阶段截获登录密码、
+    # session 阶段用它解锁 kdewallet；u2f 登录不经过密码（sufficient
+    # 直接短路，kwallet 连 auth 阶段都不会执行），session 阶段没有口令
+    # 可用便整体跳过。forceRun 让 session 阶段无条件执行并以空口令解锁，
+    # 配合空密码的 kdewallet 即不再弹窗。
+    # 前置条件：kwalletmanager → kdewallet → 修改密码 → 留空。
+    # 权衡：本机无全盘加密，钱包文件本就只受文件系统权限保护，空密码与
+    # +presence 模型一致；代价是任何以 baka 运行的本地进程都能静默读取
+    # 钱包全部内容。挂在 login 上：sddm 的 auth/session 分别 substack、
+    # include login，TTY 登录也一并生效。
+    login.kwallet = {
+      enable = true;
+      forceRun = true;
+    };
   };
 }
