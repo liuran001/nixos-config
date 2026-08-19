@@ -20,6 +20,15 @@ let
       cp --no-preserve=mode,ownership ${gpuHelper}/bin/gpu-helper vendor/gpu-helper/gpu-helper
     '';
     postPatch = (oldAttrs.postPatch or "") + ''
+      # 上游 csproj 里写死 <Version>1.0.0</Version> 且从不更新，而
+      # AppConfig 读的是 AssemblyInformationalVersion，于是程序永远自称 1.0.0，
+      # 内置版本检查一比就判定过期，每次启动都弹更新提示。
+      # 用软件包的真实版本替换，让自报版本与实际构建一致。
+      substituteInPlace src/GHelper.Linux.csproj \
+        --replace-fail \
+          '<Version>1.0.0</Version>' \
+          '<Version>${oldAttrs.version}</Version>'
+
       substituteInPlace src/UI/Views/UpdatesWindow.axaml.cs \
         --replace-fail \
           'btnRow.Children.Add(btnUpdate);' \
