@@ -35,6 +35,14 @@ in
   # Waydroid 共享宿主内核，并在 Plasma Wayland 会话中运行 Android 应用。
   virtualisation.waydroid.enable = true;
 
+  # Linux 6.17 起 legacy iptables 由 CONFIG_NETFILTER_XTABLES_LEGACY 门控，
+  # zen 内核默认不再提供 ip_tables/iptable_nat 模块；而 waydroid-net.sh 上游
+  # 始终优先调用 iptables-legacy（waydroid#178 仍未修），容器启动时报
+  # "Module ip_tables not found"。nixpkgs 为此提供官方变体 waydroid-nftables：
+  # 构建时 USE_NFTABLES=1 把脚本的 LXC_USE_NFT 改为 true，包装 PATH 中的
+  # iptables 也换成 nftables，与 NixOS 防火墙的 nftables 后端共存。
+  virtualisation.waydroid.package = pkgs.waydroid-nftables;
+
   # 不启用 KernelSU：Waydroid 没有独立内核，启用它必须修改宿主内核，
   # 会把实验性 Android root 补丁带进整台主机的信任边界。
 
