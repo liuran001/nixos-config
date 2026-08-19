@@ -15,6 +15,8 @@ _final: prev: {
     douyin = prev.callPackage ./douyin.nix { };
     keyguard = prev.callPackage ./keyguard.nix { };
     kimi-code = prev.callPackage ./kimi-code.nix { };
+    # 用 kdePackages.callPackage，让 KF6 与 Qt 6 的依赖直接从 KDE 包集里解析。
+    krunner-pinyin-search = prev.kdePackages.callPackage ./krunner-pinyin-search.nix { };
     lark = prev.callPackage ./lark.nix { };
     motrix = prev.callPackage ./motrix.nix { };
     # 上游仓库直接作为源码输入，由 flake.nix 传入。

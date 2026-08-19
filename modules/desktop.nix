@@ -34,6 +34,11 @@ in
   environment.systemPackages = [
     spectacleWithOcr
     tesseractWithLanguages
+    # KRunner 拼音搜索：装到系统 profile，插件路径会被 qt.enable 设置的
+    # QT_PLUGIN_PATH 覆盖，KRunner 启动时即可发现。
+    # 它与内置的“应用程序”搜索项并存，两者会给出重复结果；
+    # 如需只保留拼音版，在系统设置 → 搜索 → Plasma 搜索里关掉内置那一项。
+    pkgs.bakaPackages.krunner-pinyin-search
   ];
   # 启用 KDE Connect，并由 NixOS 模块同时开放设备发现和传输所需的 TCP/UDP 端口。
   programs.kdeconnect.enable = true;
