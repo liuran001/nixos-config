@@ -20,7 +20,6 @@
     bakaPackages.douyin
     bakaPackages.open-orpheus
     bakaPackages.splayer-next
-    bakaPackages.openchamber-desktop
     go-musicfox
     vlc
     obs-studio
@@ -45,7 +44,8 @@
     # programs.partition-manager.enable，它同时提供提权所需的 polkit 与 D-Bus 配置。
     microsoft-edge
     bakaPackages.motrix
-    bakaPackages.openchamber-desktop
+    # OpenChamber 桌面版在 home/baka/ai.nix 安装：它 fork 的 opencode 需要
+    # agenix 密钥，只能走那里的包装器，直接装原包会拿不到模型和 MCP 认证。
     bakaPackages.pjsk-cursor-theme
   ];
 }

@@ -209,6 +209,40 @@ let
     environment.OMX_AUTO_UPDATE = "0";
   };
 
+  # OpenChamber 是 OpenCode 的图形前端，自己 fork 一个 opencode 服务端进程：
+  # 桌面版固定用 AppImage 里自带的 resources/opencode-cli/opencode，Web CLI 按
+  # settings.opencodeBinary 或 PATH 解析。这个子进程只继承前端自身的环境，而从
+  # Plasma 菜单或普通 shell 启动时那里没有 agenix 密钥，于是 opencode.json 里的
+  # {env:OPENAI_API_KEY} 和各 MCP 的 {env:*} 全部展开成空值：obdo 的模型发现被
+  # /v1/models 判 401（界面上一个模型都没有），远程 MCP 也因空 Bearer 认证失败。
+  # 因此这里和 opencode 一样用包装器注入，再由前端传给它 fork 的 opencode。
+  openchamberDesktopPackage = pkgs.bakaPackages.openchamber-desktop;
+
+  openchamberDesktopSecrets = mkSecretWrapper {
+    name = "openchamber-desktop";
+    executable = lib.getExe openchamberDesktopPackage;
+    secretFile = oapiSecretFile;
+    secretVariables = [ "OPENAI_API_KEY" ];
+    extraSecrets = mcpSecretFiles;
+  };
+
+  # .desktop 里的 Exec=openchamber-desktop 按 PATH 解析，所以 profile 里的
+  # bin/openchamber-desktop 必须是包装器；菜单项与图标仍取自原包，两者整体安装
+  # 会在同名文件上冲突，只能重新组装。
+  openchamberDesktop = pkgs.runCommand "openchamber-desktop-wrapped" { } ''
+    mkdir -p "$out/bin"
+    ln -s ${openchamberDesktopSecrets}/bin/openchamber-desktop "$out/bin/openchamber-desktop"
+    cp -r --no-preserve=mode ${openchamberDesktopPackage}/share "$out/share"
+  '';
+
+  openchamberWrapper = mkSecretWrapper {
+    name = "openchamber";
+    executable = lib.getExe pkgs.bakaPackages.openchamber-web;
+    secretFile = oapiSecretFile;
+    secretVariables = [ "OPENAI_API_KEY" ];
+    extraSecrets = mcpSecretFiles;
+  };
+
   ghWrapper = mkSecretWrapper {
     name = "gh";
     executable = lib.getExe pkgs.gh;
@@ -561,6 +595,8 @@ in
     ohMyClaudeCode
     omoWrapper
     omxWrapper
+    openchamberDesktop
+    openchamberWrapper
     opencodeWrapper
   ];
 
