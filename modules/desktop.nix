@@ -37,6 +37,12 @@ in
   ];
   # 启用 KDE Connect，并由 NixOS 模块同时开放设备发现和传输所需的 TCP/UDP 端口。
   programs.kdeconnect.enable = true;
+  # 系统切换若恰好撞上 fwupd 的小时刷新，旧 generation 的客户端可能先于
+  # daemon-reload 启动。失败后用新加载的 unit 自动重试，避免 switch 因竞态报错。
+  systemd.services.fwupd-refresh.serviceConfig = {
+    Restart = "on-failure";
+    RestartSec = "2s";
+  };
   # Plasma 和 niri 都已安装；明确首选 Plasma，SDDM 中仍可手动选择 niri。
   services.displayManager.defaultSession = "plasma";
   # SDDM 使用 Wayland 模式（kwin 合成器），否则登录界面不会跟随屏幕缩放。
