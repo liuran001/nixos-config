@@ -7,6 +7,9 @@
     (python3.withPackages (pythonPackages: [ pythonPackages.pip ]))
     nodejs
     ast-grep
+    # 命令行音视频转码；核显的 VA-API 栈见 hosts/bakaPC-NixOS/graphics.nix，
+    # 可用 `ffmpeg -hwaccels` 确认 vaapi 可用。需要更多冷门编解码器时换成 ffmpeg-full。
+    ffmpeg
     android-tools
     android-studio
     jetbrains.idea
