@@ -24,6 +24,8 @@ _final: prev: {
       src = ohMyClaudeCodeSource;
     };
     open-orpheus = prev.callPackage ./open-orpheus.nix { };
+    opencode-claude-auth = prev.callPackage ./opencode-claude-auth.nix { };
+    opencode-models-discovery = prev.callPackage ./opencode-models-discovery.nix { };
     pjsk-cursor-theme = prev.callPackage ./pjsk-cursor-theme.nix { };
     splayer-next = prev.callPackage ./splayer-next.nix { };
     # 在 nixpkgs 的微信之上补输入法环境变量，不改动上游包本身。
