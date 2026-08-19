@@ -438,6 +438,7 @@ let
       /sys/class/power_supply/BAT*/charge_control_end_threshold \
       /sys/class/backlight/*/brightness \
       /sys/firmware/acpi/platform_profile \
+      /sys/class/platform-profile/*/profile \
       /sys/devices/system/cpu/intel_pstate/no_turbo \
       /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference \
       /sys/devices/system/cpu/cpu*/online \
@@ -468,8 +469,18 @@ in
   # Fn 键重映射使用 uinput；本机触摸板不是发光 NumberPad，不开放 i2c-dev。
   boot.kernelModules = [ "uinput" ];
 
+  # 组在这里创建；哪些账号加入由主机配置决定（见 hosts/*/users.nix），
+  # 这样本模块不反向引用某台机器上的具体用户名。
   users.groups.ghelper = { };
-  users.users.baka.extraGroups = [ "ghelper" ];
+
+  # G-Helper 直接写 platform_profile、no_turbo 和 EPP，而 power-profiles-daemon
+  # 也在管这三者：两边都写同一批节点，谁后写谁生效，表现为在 G-Helper 里
+  # 选好的性能模式会被 KDE 电源部件或 PPD 的策略悄悄改回去。
+  # 这里让 G-Helper 独占（它还负责 PPT 与风扇曲线，PPD 无法替代）。
+  # 代价：KDE 电源管理里的三档性能模式切换会消失，改用 G-Helper 界面。
+  # 若想反过来让 PPD 主管，请删除下面这行，并从 setHardwarePermissions
+  # 里去掉 platform_profile、no_turbo 和 energy_performance_preference。
+  services.power-profiles-daemon.enable = false;
 
   # 热插拔设备节点只授权给当前 seat 或 ghelper 组，不使用上游的 MODE=0666。
   services.udev.extraRules = ''
@@ -485,6 +496,7 @@ in
 
     ACTION=="add|change", SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", RUN+="${setHardwarePermissions}"
     ACTION=="add|change", SUBSYSTEM=="firmware-attributes", RUN+="${setHardwarePermissions}"
+    ACTION=="add|change", SUBSYSTEM=="platform-profile", RUN+="${setHardwarePermissions}"
     ACTION=="add|change", SUBSYSTEM=="power_supply", RUN+="${setHardwarePermissions}"
     ACTION=="add|change", SUBSYSTEM=="backlight", RUN+="${setHardwarePermissions}"
     ACTION=="add|change", SUBSYSTEM=="hwmon", ATTR{name}=="asus_nb_wmi", RUN+="${setHardwarePermissions}"
