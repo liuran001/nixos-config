@@ -1,3 +1,6 @@
 # nixos-rebuild build 等命令产生的构建结果符号链接
 result
 result-*
+
+# oh-my-claudecode 的会话、状态与项目记忆，属于本机运行时数据
+.omc/
