@@ -18,6 +18,9 @@ _final: prev: {
     # 用 kdePackages.callPackage，让 KF6 与 Qt 6 的依赖直接从 KDE 包集里解析。
     krunner-pinyin-search = prev.kdePackages.callPackage ./krunner-pinyin-search.nix { };
     lark = prev.callPackage ./lark.nix { };
+    # KernelSU 模块本身要按内核版本编译，只能在 modules/virtualisation.nix 里
+    # 用 boot.kernelPackages.callPackage；加载器不依赖内核，放在这里方便单独构建。
+    modloader = prev.callPackage ./modloader.nix { };
     motrix = prev.callPackage ./motrix.nix { };
     # 上游仓库直接作为源码输入，由 flake.nix 传入。
     oh-my-claudecode = prev.callPackage ./oh-my-claudecode.nix {
