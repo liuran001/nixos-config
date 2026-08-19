@@ -69,9 +69,10 @@ Bash 别名 `nrt`、`nrb`、`nrs` 分别对应上述 test、boot、switch 命令
 
 ## AI 工具与密钥
 
-AI 配置集中在 [`home/baka/ai.nix`](home/baka/ai.nix)，默认通过
-`https://oapi.obdo.cc/v1` 使用 `gpt-5.6-sol`；DeepSeek Harness 单独使用
-`deepseek-v4-pro`。当前提供以下入口：
+AI 配置集中在 [`home/baka/ai.nix`](home/baka/ai.nix)。Codex、OpenCode、Pi
+及其编排工具默认通过 `https://oapi.obdo.cc/v1` 使用 `gpt-5.6-sol`；
+DeepSeek Harness 单独使用 `deepseek-v4-pro`。Claude Code 与 Kimi Code 不使用
+这个第三方端点或密钥，保留各自官方账号登录。当前提供以下入口：
 
 - Codex CLI、Codex Desktop 与 Oh My Codex（`omx`）；
 - Claude Code 与 Oh My ClaudeCode（`claude`、`omc`）；
@@ -93,7 +94,8 @@ API key 与 GitHub token 由 [`agenix`](hosts/bakaPC-NixOS/secrets.nix) 管理�
 /run/agenix/github-token
 ```
 
-各 AI 配置或包装器只在目标进程启动时读取 OAPI key，不把它写入 Nix store 或全局会话环境。
+需要 OAPI 的配置或包装器只在目标进程启动时读取密钥，不把它写入 Nix store 或全局会话环境；
+Claude 与 Kimi 不读取该密钥。
 首次部署前确认 `/home/baka/.ssh/id_ed25519` 对应
 [`secrets/secrets.nix`](secrets/secrets.nix) 中的 recipient，然后从 `secrets/` 目录编辑密文：
 

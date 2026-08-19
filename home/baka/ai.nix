@@ -9,7 +9,6 @@
 
 let
   apiBaseUrl = "https://oapi.obdo.cc/v1";
-  apiRootUrl = "https://oapi.obdo.cc";
   defaultModel = "gpt-5.6-sol";
   deepseekModel = "deepseek-v4-pro";
   homeDirectory = "/home/baka";
@@ -22,7 +21,18 @@ let
   ohMyClaudeCode = pkgs.callPackage ../../pkgs/oh-my-claudecode.nix {
     src = ohMyClaudeCodeSource;
   };
-  ompPackage = omp.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  # nix-bun upstream still reads the deprecated stdenv.isLinux/isDarwin aliases.
+  # Supply plain boolean compatibility fields locally so evaluation stays quiet
+  # without mutating nixpkgs globally or forking the upstream package.
+  ompStdenv = pkgs.stdenv // {
+    inherit (pkgs.stdenv.hostPlatform) isDarwin isLinux;
+  };
+  ompBun = omp.inputs.nix-bun.packages.${pkgs.stdenv.hostPlatform.system}.bun.override {
+    stdenv = ompStdenv;
+  };
+  ompPackage = omp.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
+    bun = ompBun;
+  };
   ohMyOpenCodeRoot = "${aiTools}/lib/node_modules/nixos-ai-tools/node_modules/oh-my-opencode";
   ohMyOpenCodePlugin = "file://${ohMyOpenCodeRoot}";
 
@@ -65,39 +75,22 @@ let
       '';
     };
 
-  claudeEnvironment = {
-    ANTHROPIC_BASE_URL = apiRootUrl;
-    ANTHROPIC_MODEL = defaultModel;
-    ANTHROPIC_DEFAULT_FABLE_MODEL = defaultModel;
-    ANTHROPIC_DEFAULT_HAIKU_MODEL = defaultModel;
-    ANTHROPIC_DEFAULT_OPUS_MODEL = defaultModel;
-    ANTHROPIC_DEFAULT_SONNET_MODEL = defaultModel;
-    ANTHROPIC_SMALL_FAST_MODEL = defaultModel;
-    CLAUDE_CODE_SUBAGENT_MODEL = defaultModel;
-    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
-    DISABLE_AUTOUPDATER = "1";
-    DISABLE_TELEMETRY = "1";
-    DISABLE_UPDATES = "1";
-  };
-
-  claudeWrapper = mkSecretWrapper {
+  # Claude 使用官方账号登录；这里只加载 Oh My ClaudeCode 插件，不注入第三方
+  # API 密钥、端点或模型环境变量。
+  claudeWithPlugin = pkgs.writeShellApplication {
     name = "claude";
-    executable = lib.getExe pkgs.claude-code;
-    secretFile = oapiSecretFile;
-    secretVariables = [ "ANTHROPIC_AUTH_TOKEN" ];
-    environment = claudeEnvironment;
-    arguments = [
-      "--plugin-dir"
-      "${ohMyClaudeCode}/share/oh-my-claudecode"
-    ];
-  };
-
-  omcWrapper = mkSecretWrapper {
-    name = "omc";
-    executable = lib.getExe ohMyClaudeCode;
-    secretFile = oapiSecretFile;
-    secretVariables = [ "ANTHROPIC_AUTH_TOKEN" ];
-    environment = claudeEnvironment;
+    text = ''
+      # Force the official claude.ai login path even if an old shell exported
+      # API-compatible credentials from a previous NixOS generation.
+      unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN ANTHROPIC_BASE_URL \
+        ANTHROPIC_MODEL ANTHROPIC_DEFAULT_FABLE_MODEL \
+        ANTHROPIC_DEFAULT_HAIKU_MODEL ANTHROPIC_DEFAULT_OPUS_MODEL \
+        ANTHROPIC_DEFAULT_SONNET_MODEL ANTHROPIC_SMALL_FAST_MODEL \
+        CLAUDE_CODE_SUBAGENT_MODEL
+      exec ${lib.getExe pkgs.claude-code} \
+        --plugin-dir ${ohMyClaudeCode}/share/oh-my-claudecode \
+        "$@"
+    '';
   };
 
   opencodeWrapper = mkSecretWrapper {
@@ -153,23 +146,6 @@ let
     environment.DSH_TELEMETRY_MODE = "DISABLED";
   };
 
-  kimiWrapper = mkSecretWrapper {
-    name = "kimi";
-    executable = lib.getExe kimiPackage;
-    secretFile = oapiSecretFile;
-    secretVariables = [ "KIMI_MODEL_API_KEY" ];
-    environment = {
-      KIMI_MODEL_NAME = defaultModel;
-      KIMI_MODEL_PROVIDER_TYPE = "openai";
-      KIMI_MODEL_BASE_URL = apiBaseUrl;
-      KIMI_MODEL_MAX_CONTEXT_SIZE = "1048576";
-      KIMI_MODEL_CAPABILITIES = "thinking,image_in,tool_use";
-      KIMI_MODEL_DISPLAY_NAME = "GPT-5.6 Sol";
-      KIMI_DISABLE_TELEMETRY = "1";
-      KIMI_CODE_NO_AUTO_UPDATE = "1";
-    };
-  };
-
   omxWrapper = mkSecretWrapper {
     name = "omx";
     executable = "${aiTools}/bin/omx";
@@ -195,6 +171,13 @@ let
     approval_policy = "never";
     sandbox_mode = "danger-full-access";
     web_search = "disabled";
+
+    # Codex asks to persist this trust decision on first launch. Keep it
+    # declarative so the generated config remains intentionally read-only.
+    projects = {
+      "${homeDirectory}".trust_level = "trusted";
+      "${homeDirectory}/nixos".trust_level = "trusted";
+    };
 
     developer_instructions = ''
       Oh My Codex 已安装。以 ~/.codex/AGENTS.md 为编排入口，按其中规则使用
@@ -398,12 +381,12 @@ in
 {
   home.packages = [
     pkgs.codex
-    claudeWrapper
+    claudeWithPlugin
     dshWrapper
     ghWrapper
-    kimiWrapper
+    kimiPackage
     ohMyOpenCodeWrapper
-    omcWrapper
+    ohMyClaudeCode
     omoWrapper
     omxWrapper
     opencodeWrapper
