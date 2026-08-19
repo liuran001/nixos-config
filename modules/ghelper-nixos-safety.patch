@@ -1,0 +1,128 @@
+diff --git a/src/Gpu/GPUModeControl.cs b/src/Gpu/GPUModeControl.cs
+index fcb50da..33dc384 100644
+--- a/src/Gpu/GPUModeControl.cs
++++ b/src/Gpu/GPUModeControl.cs
+@@ -902 +902,2 @@ public class GPUModeControl
+-        bool blocksPresent = File.Exists(ModprobeBlockPath) || File.Exists(UdevRemovePath);
++        bool blocksPresent = (!NixOS.IsNixOS || IsTestMode) &&
++            (File.Exists(ModprobeBlockPath) || File.Exists(UdevRemovePath));
+@@ -3044,0 +3046 @@ public class GPUModeControl
++    private const string NixOSStateDirectory = "/var/lib/ghelper-nixos";
+@@ -3047 +3049,5 @@ public class GPUModeControl
+-    internal static readonly string ModprobeBlockPath = TestPathPrefix + "/etc/modprobe.d/ghelper-gpu-block.conf";
++    internal static readonly string ModprobeBlockPath = IsTestMode
++        ? TestPathPrefix + "/etc/modprobe.d/ghelper-gpu-block.conf"
++        : NixOS.IsNixOS
++            ? NixOSStateDirectory + "/unsupported-modprobe-block"
++            : "/etc/modprobe.d/ghelper-gpu-block.conf";
+@@ -3050 +3056,5 @@ public class GPUModeControl
+-    internal static readonly string UdevRemovePath = TestPathPrefix + "/etc/udev/rules.d/50-ghelper-remove-dgpu.rules";
++    internal static readonly string UdevRemovePath = IsTestMode
++        ? TestPathPrefix + "/etc/udev/rules.d/50-ghelper-remove-dgpu.rules"
++        : NixOS.IsNixOS
++            ? NixOSStateDirectory + "/unsupported-udev-remove"
++            : "/etc/udev/rules.d/50-ghelper-remove-dgpu.rules";
+@@ -3053 +3063,3 @@ public class GPUModeControl
+-    internal static readonly string TriggerPath = TestPathPrefix + "/etc/ghelper/pending-gpu-mode";
++    internal static readonly string TriggerPath = IsTestMode
++        ? TestPathPrefix + "/etc/ghelper/pending-gpu-mode"
++        : (NixOS.IsNixOS ? NixOSStateDirectory : "/etc/ghelper") + "/pending-gpu-mode";
+@@ -3061 +3073,3 @@ public class GPUModeControl
+-    internal static readonly string PersistentTriggerPath = TestPathPrefix + "/etc/ghelper/persistent-gpu-mode";
++    internal static readonly string PersistentTriggerPath = IsTestMode
++        ? TestPathPrefix + "/etc/ghelper/persistent-gpu-mode"
++        : (NixOS.IsNixOS ? NixOSStateDirectory : "/etc/ghelper") + "/persistent-gpu-mode";
+@@ -3064 +3078,3 @@ public class GPUModeControl
+-    internal static readonly string BackendPath = TestPathPrefix + "/etc/ghelper/backend";
++    internal static readonly string BackendPath = IsTestMode
++        ? TestPathPrefix + "/etc/ghelper/backend"
++        : (NixOS.IsNixOS ? NixOSStateDirectory : "/etc/ghelper") + "/backend";
+@@ -3281,0 +3298,5 @@ public class GPUModeControl
++            else if (NixOS.IsNixOS)
++            {
++                Logger.WriteLine("GPUModeControl: NixOS state helper missing; refusing inline backend fallback");
++                return;
++            }
+@@ -3330,0 +3352,5 @@ public class GPUModeControl
++                else if (NixOS.IsNixOS)
++                {
++                    Logger.WriteLine("GPUModeControl: PCI live-standard is unsupported on NixOS");
++                    return GpuSwitchResult.Failed;
++                }
+@@ -3415,0 +3442,3 @@ public class GPUModeControl
++        if (NixOS.IsNixOS && !IsTestMode)
++            return File.Exists(TriggerPath);
++
+@@ -3452 +3481 @@ public class GPUModeControl
+-            if (!isEco && !isPci)
++            if (!isEco && !isPci && (!NixOS.IsNixOS || IsTestMode))
+@@ -3504,0 +3534,5 @@ public class GPUModeControl
++                else if (NixOS.IsNixOS)
++                {
++                    Logger.WriteLine("GPUModeControl: NixOS state helper missing; refusing inline /etc fallback");
++                    return;
++                }
+@@ -3592,0 +3627,5 @@ public class GPUModeControl
++            else if (NixOS.IsNixOS)
++            {
++                Logger.WriteLine("GPUModeControl: NixOS state helper missing; refusing inline cleanup fallback");
++                return;
++            }
+@@ -3631,0 +3671,5 @@ public class GPUModeControl
++            else if (NixOS.IsNixOS)
++            {
++                Logger.WriteLine("GPUModeControl: NixOS state helper missing; refusing inline persistence fallback");
++                return;
++            }
+diff --git a/src/Helpers/AppConfig.cs b/src/Helpers/AppConfig.cs
+index d3971b7..3bfe19f 100644
+--- a/src/Helpers/AppConfig.cs
++++ b/src/Helpers/AppConfig.cs
+@@ -650,0 +651,5 @@ public static class AppConfig
++        // NixOS owns boot/module policy declaratively. Its integration exposes
++        // only the ASUS firmware backend and never creates modprobe/udev files.
++        if (GHelper.Linux.Platform.Linux.NixOS.IsNixOS &&
++            string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GHELPER_TEST_ROOT")))
++            return "asus-wmi";
+diff --git a/src/Platform/Linux/MemSleep.cs b/src/Platform/Linux/MemSleep.cs
+index bbbaec1..79212e9 100644
+--- a/src/Platform/Linux/MemSleep.cs
++++ b/src/Platform/Linux/MemSleep.cs
+@@ -21 +21,2 @@ public static class MemSleep
+-    public const string StatePath = "/etc/ghelper/mem-sleep";
++    public static readonly string StatePath = NixOS.IsNixOS
++        ? "/var/lib/ghelper-nixos/mem-sleep" : "/etc/ghelper/mem-sleep";
+@@ -67,2 +68,16 @@ public static class MemSleep
+-        SysfsHelper.RunPkexecBash(
+-            $"echo {variant} > {SysPath} && mkdir -p /etc/ghelper && echo {variant} > {StatePath}");
++        if (NixOS.IsNixOS)
++        {
++            string? helper = NixOS.ResolveGpuBlockHelper();
++            if (helper == null)
++            {
++                Helpers.Logger.WriteLine("MemSleep: NixOS state helper is unavailable");
++                return false;
++            }
++            SysfsHelper.RunSudoOrPkexec(helper, new[] { "mem-sleep", variant },
++                sudoTimeoutMs: 30000, pkexecTimeoutMs: 60000);
++        }
++        else
++        {
++            SysfsHelper.RunPkexecBash(
++                $"echo {variant} > {SysPath} && mkdir -p /etc/ghelper && echo {variant} > {StatePath}");
++        }
+diff --git a/src/UI/Views/ExtraWindow.axaml.cs b/src/UI/Views/ExtraWindow.axaml.cs
+index e6d21e0..51c8c35 100644
+--- a/src/UI/Views/ExtraWindow.axaml.cs
++++ b/src/UI/Views/ExtraWindow.axaml.cs
+@@ -2428 +2428,2 @@ public partial class ExtraWindow : Window
+-        bool canToggle = wmi?.CanToggleGpuBackend() ?? false;
++        bool isNixOS = Platform.Linux.NixOS.IsNixOS;
++        bool canToggle = isNixOS ? wmi != null : wmi?.CanToggleGpuBackend() ?? false;
+@@ -2429,0 +2431,3 @@ public partial class ExtraWindow : Window
++        labelGpuBackendIntro.IsVisible = !isNixOS;
++        checkPciGpuBackend.IsVisible = !isNixOS;
++        labelPciGpuBackendHint.IsVisible = !isNixOS;
+@@ -2451 +2455 @@ public partial class ExtraWindow : Window
+-        if (_suppressEvents)
++        if (_suppressEvents || Platform.Linux.NixOS.IsNixOS)

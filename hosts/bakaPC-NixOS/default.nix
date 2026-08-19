@@ -21,6 +21,7 @@
     ../../modules/desktop.nix
     ../../modules/fonts.nix
     ../../modules/gaming.nix
+    ../../modules/ghelper.nix
     ../../modules/i18n.nix
     ../../modules/niri.nix
     ../../modules/nix-settings.nix
