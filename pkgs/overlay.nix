@@ -30,5 +30,9 @@ _final: prev: {
     splayer-next = prev.callPackage ./splayer-next.nix { };
     # 在 nixpkgs 的微信之上补输入法环境变量，不改动上游包本身。
     wechat = prev.callPackage ./wechat.nix { };
+    # 同理，给 WPS 补上 QT_IM_MODULE，让它用上自带的 fcitx 插件。
+    wpsoffice = prev.callPackage ./wpsoffice.nix { };
+    # 从同一份 deb 里取出被 nixpkgs 删掉的自带字体，由 modules/fonts.nix 安装。
+    wps-office-fonts = prev.callPackage ./wps-office-fonts.nix { };
   };
 }

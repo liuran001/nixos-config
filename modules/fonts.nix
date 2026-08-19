@@ -12,6 +12,9 @@
       wqy_microhei # 文泉驿微米黑。
       liberation_ttf # 与 Arial / Times New Roman / Courier New 度量兼容的自由字体。
       dejavu_fonts # DejaVu 通用字体，许多程序的默认等宽/西文字体。
+      # WPS 自带字体，nixpkgs 的 wpsoffice-cn 把它们删掉了；其中 DejaVu Math
+      # TeX Gyre 是公式编辑器排数学符号用的，缺了公式会变方框。见 pkgs/wps-office-fonts.nix。
+      bakaPackages.wps-office-fonts
       # 补齐 Nerd Font 图标（分支、箭头、文件类型），供终端提示符 powerlevel10k
       # 和 eza --icons 使用；缺了它们只会显示成方框。见 home/baka/shell.nix。
       nerd-fonts.jetbrains-mono

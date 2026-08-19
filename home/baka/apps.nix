@@ -24,6 +24,9 @@
     vlc
     obs-studio
 
+    # 办公与文档。
+    bakaPackages.wpsoffice # 官方包外加了 QT_IM_MODULE，否则无法输入中文
+
     # 桌面工具和外观。
     bakaPackages.keyguard
     fastfetch
