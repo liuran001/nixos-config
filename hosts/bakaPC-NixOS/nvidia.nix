@@ -12,6 +12,11 @@
     modesetting.enable = true;
     # 笔记本电源管理，修复挂起/唤醒后独显异常的问题。
     powerManagement.enable = true;
+    # 细粒度运行时电源管理（驱动参数 NVreg_DynamicPowerManagement=0x02）：
+    # 独显空闲时整卡进入 D3cold，需要 PRIME offload 与 Turing 以上核心，本机均满足。
+    # 仅 powerManagement.enable 只处理挂起/唤醒，独显仍会长期停在 D0；
+    # 用 `cat /sys/bus/pci/devices/0000:02:00.0/power/runtime_status` 应能看到 suspended。
+    powerManagement.finegrained = true;
     # Blackwell（RTX 50 系）只支持开源内核模块，必须开启。
     open = true;
     # 安装 nvidia-settings 图形设置面板。

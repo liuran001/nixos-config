@@ -12,6 +12,7 @@
     ./hardware-configuration.nix
     ./boot.nix
     ./display.nix
+    ./graphics.nix
     ./networking.nix
     ./nvidia.nix
     ./secrets.nix
