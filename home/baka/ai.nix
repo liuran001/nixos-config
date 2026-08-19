@@ -33,6 +33,10 @@ let
   };
   ohMyOpenCodeRoot = "${aiTools}/lib/node_modules/nixos-ai-tools/node_modules/oh-my-opencode";
   ohMyOpenCodePlugin = "file://${ohMyOpenCodeRoot}";
+  # 复用 Claude Code 官方登录的 OAuth 凭据，为 OpenCode 提供 anthropic provider。
+  opencodeClaudeAuthPlugin = "file://${pkgs.bakaPackages.opencode-claude-auth}";
+  # 启动时从 /v1/models 动态发现模型列表，替代写死的 models 表。
+  opencodeModelsDiscoveryPlugin = "file://${pkgs.bakaPackages.opencode-models-discovery}";
 
   jsonFormat = pkgs.formats.json { };
   tomlFormat = pkgs.formats.toml { };
@@ -217,7 +221,7 @@ let
     ];
 
     model_providers.obdo = {
-      name = "OBDO OpenAI-compatible API";
+      name = "Baka API";
       base_url = apiBaseUrl;
       wire_api = "responses";
       auth = {
@@ -269,6 +273,7 @@ let
 
   piModels = jsonFormat.generate "pi-models.json" {
     providers.obdo = {
+      name = "Baka API";
       baseUrl = apiBaseUrl;
       api = "openai-responses";
       apiKey = "OPENAI_API_KEY";
@@ -294,13 +299,9 @@ let
       baseUrl = apiBaseUrl;
       api = "openai-responses";
       apiKey = "OPENAI_API_KEY";
-      models = [
-        {
-          id = defaultModel;
-          name = "GPT-5.6 Sol";
-          reasoning = true;
-        }
-      ];
+      # omp 原生支持从 OpenAI 兼容端点动态发现模型；已知模型（如
+      # gpt-5.6-sol）的 reasoning/上下文窗口等元数据从内置 catalog 继承。
+      discovery.type = "openai-models-list";
     };
   };
 
@@ -308,20 +309,29 @@ let
     model = "obdo/${defaultModel}";
     autoupdate = false;
     share = "disabled";
-    plugin = [ ohMyOpenCodePlugin ];
+    plugin = [
+      ohMyOpenCodePlugin
+      opencodeClaudeAuthPlugin
+      opencodeModelsDiscoveryPlugin
+    ];
     provider.obdo = {
-      name = "OBDO OpenAI-compatible API";
+      name = "Baka API";
       npm = "@ai-sdk/openai";
       options = {
         baseURL = apiBaseUrl;
         apiKey = "{env:OPENAI_API_KEY}";
+        # 模型列表由 opencode-models-discovery 插件从该端点动态发现，
+        # 不再写死；enabled 同时是对该 provider 的强制发现开关。
+        modelsDiscovery.enabled = true;
       };
-      models.${defaultModel}.name = "GPT-5.6 Sol";
     };
   };
 
   opencodeTuiConfig = jsonFormat.generate "opencode-tui.json" {
-    plugin = [ ohMyOpenCodePlugin ];
+    plugin = [
+      ohMyOpenCodePlugin
+      opencodeModelsDiscoveryPlugin
+    ];
   };
 
   omoAgentOverrides =
