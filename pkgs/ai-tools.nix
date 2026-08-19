@@ -17,7 +17,7 @@ buildNpmPackage {
   src = ./ai-tools;
 
   nodejs = nodejs_24;
-  npmDepsHash = "sha256-5wdWw6glSV+U59ywtQ8toztcVVTZ9ZsvBiZ57lHnXHQ=";
+  npmDepsHash = "sha256-PXPwd6BXRWRcqGjOYBZqz7kFyU90wx8/O1NMKIrovgE=";
   npmFlags = [ "--ignore-scripts" ];
   dontNpmBuild = true;
   dontNpmPrune = true;

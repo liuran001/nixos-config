@@ -7,6 +7,6 @@
   "dependencies": {
     "@deepseek-ai/dsh": "0.1.0-rc.7",
     "oh-my-codex": "0.20.5",
-    "oh-my-opencode": "5.0.0-beta.10"
+    "oh-my-opencode": "5.0.0-beta.11"
   }
 }

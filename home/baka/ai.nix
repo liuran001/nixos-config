@@ -1,6 +1,7 @@
 # baka 的 AI 编程工具：配置、插件与运行时密钥注入集中在此文件。
 {
   lib,
+  ohMyClaudeCodeSource,
   omp,
   pkgs,
   ...
@@ -18,7 +19,9 @@ let
 
   aiTools = pkgs.callPackage ../../pkgs/ai-tools.nix { };
   kimiPackage = pkgs.callPackage ../../pkgs/kimi-code.nix { };
-  ohMyClaudeCode = pkgs.callPackage ../../pkgs/oh-my-claudecode.nix { };
+  ohMyClaudeCode = pkgs.callPackage ../../pkgs/oh-my-claudecode.nix {
+    src = ohMyClaudeCodeSource;
+  };
   ompPackage = omp.packages.${pkgs.stdenv.hostPlatform.system}.default;
   ohMyOpenCodeRoot = "${aiTools}/lib/node_modules/nixos-ai-tools/node_modules/oh-my-opencode";
   ohMyOpenCodePlugin = "file://${ohMyOpenCodeRoot}";
