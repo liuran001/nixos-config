@@ -42,6 +42,20 @@ stdenvNoCC.mkDerivation rec {
     substituteInPlace "$out/lib/douyin/dy-tray.js" \
       --replace-fail "/opt/apps/com.douyin.otohime/files/douyin" "$out/bin/douyin"
 
+    # 修复上游 setWindowOpenHandler 的默认分支：它返回 action: 'deny'，却同时给出
+    # overrideBrowserWindowOptions —— 后者只在 'allow' 时生效。结果所有没被前面特判
+    # 的 window.open 都被静默拦掉，表现为「设置」等弹窗页面点了没反应。
+    # 只改这一处：overrideBrowserWindowOptions 全文仅出现一次，其余 deny 分支
+    # （bytedance:// 协议、外部浏览器跳转、主窗口内加载）保持原样。
+    # 文件是 CRLF，且要跨行匹配，因此用 sed -z 而不是 substituteInPlace。
+    dyMain=$(find "$out/lib/douyin" -name dy.js -maxdepth 2 | head -1)
+    grep -qz "action: 'deny',\s*overrideBrowserWindowOptions:" "$dyMain"
+    sed -i -z \
+      "s/action: 'deny',\(\s*\)overrideBrowserWindowOptions:/action: 'allow',\1overrideBrowserWindowOptions:/" \
+      "$dyMain"
+    # 上游改版导致补丁失效时让构建直接失败，而不是静默退回坏行为。
+    grep -qz "action: 'allow',\s*overrideBrowserWindowOptions:" "$dyMain"
+
     makeWrapper ${lib.getExe electron_42} "$out/bin/douyin" \
       --add-flags "$out/lib/douyin" \
       --prefix PATH : ${lib.makeBinPath [ libnotify ]}
