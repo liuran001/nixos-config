@@ -9,6 +9,7 @@
 let
   apiBaseUrl = "https://oapi.obdo.cc/v1";
   defaultModel = "gpt-5.6-sol";
+  librarianModel = "gemini-3.7-flash";
   deepseekModel = "deepseek-v4-pro";
   homeDirectory = "/home/baka";
   codexHome = "${homeDirectory}/.codex";
@@ -532,14 +533,13 @@ let
   };
 
   omoAgentOverrides =
-    lib.genAttrs
+    (lib.genAttrs
       [
         "OpenCode-Builder"
         "atlas"
         "build"
         "explore"
         "hephaestus"
-        "librarian"
         "metis"
         "momus"
         "multimodal-looker"
@@ -552,7 +552,14 @@ let
       (_: {
         model = "obdo/${defaultModel}";
         reasoning = "xhigh";
-      });
+      })
+    )
+    // {
+      librarian = {
+        model = "obdo/${librarianModel}";
+        reasoning = "xhigh";
+      };
+    };
 
   omoCategoryOverrides =
     lib.genAttrs
