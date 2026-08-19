@@ -100,6 +100,38 @@ let
         }
 
         if (args.Length != 2)'
+
+      # NVML 的只读查询不需要 root，但上游把温度轮询也走了提权路径：
+      # GetTempViaNvml 每约 3 秒调一次 sudo，本模块刻意不提供 NOPASSWD 规则，
+      # 于是每次都失败——实测 30 分钟产生 596 条 sudo 认证失败日志，
+      # 而温度始终读不出来。诊断面板那处更糟，它默认允许 pkexec，会弹认证框。
+      # 两处都改为直接执行 helper：gpu-helper 自身没有任何 root 检查，
+      # do_nvml_temp() 只是 nvmlInit + 读温度 + nvmlShutdown。
+      # 其余写操作（nvml-clocks 等）保持原有的提权路径不变。
+      # 用 sed -z 跨行匹配而非 substituteInPlace：Nix 的多行字符串会剥离公共缩进，
+      # 写在其中的多行字面量容易与 C# 的实际缩进不一致。
+      for nvmlFile in \
+        src/Gpu/NVidia/LinuxNvidiaGpuControl.cs \
+        src/Helpers/Diagnostics.cs; do
+        grep -qz 'RunSudoOrPkexec(\s*[A-Za-z.]*SysfsHelper\.GpuHelperPath, new\[\] { "nvml-temp" }' \
+          "$nvmlFile"
+      done
+      sed -i -z \
+        's|SysfsHelper\.RunSudoOrPkexec(\(\s*\)SysfsHelper\.GpuHelperPath, new\[\] { "nvml-temp" }, allowPkexec: false);|SysfsHelper.RunCommandWithTimeout(\1SysfsHelper.GpuHelperPath, new[] { "nvml-temp" }, 5000);|' \
+        src/Gpu/NVidia/LinuxNvidiaGpuControl.cs
+      sed -i -z \
+        's|SysfsHelper\.RunSudoOrPkexec(\(\s*\)Platform\.Linux\.SysfsHelper\.GpuHelperPath, new\[\] { "nvml-temp" });|SysfsHelper.RunCommandWithTimeout(\1Platform.Linux.SysfsHelper.GpuHelperPath, new[] { "nvml-temp" }, 5000);|' \
+        src/Helpers/Diagnostics.cs
+      # 上游改版导致补丁失效时让构建失败，而不是静默保留刷日志的行为。
+      for nvmlFile in \
+        src/Gpu/NVidia/LinuxNvidiaGpuControl.cs \
+        src/Helpers/Diagnostics.cs; do
+        grep -qz 'RunCommandWithTimeout(\s*[A-Za-z.]*SysfsHelper\.GpuHelperPath, new\[\] { "nvml-temp" }, 5000)' \
+          "$nvmlFile"
+        # 必须用 -z：调用跨两行，单行 grep 永远匹配不到，断言会形同虚设。
+        ! grep -qz 'RunSudoOrPkexec(\s*[A-Za-z.]*SysfsHelper\.GpuHelperPath, new\[\] { "nvml-temp" }' \
+          "$nvmlFile"
+      done
     '';
   });
   gpuHelperPath = lib.makeBinPath [
