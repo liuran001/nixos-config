@@ -151,16 +151,6 @@ let
     secretVariables = [ "OPENAI_API_KEY" ];
   };
 
-  piWrapper = mkSecretWrapper {
-    name = "pi";
-    executable = lib.getExe pkgs.pi-coding-agent;
-    secretFile = oapiSecretFile;
-    secretVariables = [ "OPENAI_API_KEY" ];
-    environment = {
-      PI_SKIP_VERSION_CHECK = "1";
-      PI_TELEMETRY = "0";
-    };
-  };
 
   ompWrapper = mkSecretWrapper {
     name = "omp";
@@ -271,28 +261,7 @@ let
       ${aiTools}/share/oh-my-codex/hooks-trust.toml.in >> "$out"
   '';
 
-  piModels = jsonFormat.generate "pi-models.json" {
-    providers.obdo = {
-      name = "Baka API";
-      baseUrl = apiBaseUrl;
-      api = "openai-responses";
-      apiKey = "OPENAI_API_KEY";
-      models = [
-        {
-          id = defaultModel;
-          name = "GPT-5.6 Sol";
-          reasoning = true;
-        }
-      ];
-    };
-  };
 
-  piSettings = jsonFormat.generate "pi-settings.json" {
-    defaultProvider = "obdo";
-    defaultModel = defaultModel;
-    defaultThinkingLevel = "xhigh";
-    enableInstallTelemetry = false;
-  };
 
   ompModels = yamlFormat.generate "omp-models.yml" {
     providers.obdo = {
@@ -428,7 +397,6 @@ in
     omoWrapper
     omxWrapper
     opencodeWrapper
-    piWrapper
   ];
 
   home.file = {
@@ -450,8 +418,6 @@ in
     ".codex/.omx/native-agents.json".source = "${aiTools}/share/oh-my-codex/.omx/native-agents.json";
 
     ".dsh/cordis.patch.yml".source = deepseekHarnessPatch;
-    ".pi/agent/models.json".source = piModels;
-    ".pi/agent/settings.json".source = piSettings;
     ".omp/agent/models.yml".source = ompModels;
     ".omo/omo.json".source = omoConfig;
   };
