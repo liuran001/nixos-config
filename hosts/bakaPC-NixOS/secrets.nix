@@ -18,6 +18,32 @@
       group = "users";
       mode = "0400";
     };
+    # Context7 MCP 的 API key，经 ai.nix 的包装器以环境变量注入 opencode。
+    secrets.context7-api-key = {
+      file = ../../secrets/context7-api-key.age;
+      owner = "baka";
+      group = "users";
+      mode = "0400";
+    };
+    # Tinyfish / Exa / Tavily 的 MCP API key，同样经包装器注入各 AI CLI。
+    secrets.tinyfish-api-key = {
+      file = ../../secrets/tinyfish-api-key.age;
+      owner = "baka";
+      group = "users";
+      mode = "0400";
+    };
+    secrets.exa-api-key = {
+      file = ../../secrets/exa-api-key.age;
+      owner = "baka";
+      group = "users";
+      mode = "0400";
+    };
+    secrets.tavily-api-key = {
+      file = ../../secrets/tavily-api-key.age;
+      owner = "baka";
+      group = "users";
+      mode = "0400";
+    };
     # pam_u2f 的凭据映射，见 authentication.nix。属主是 baka 而不是 root：
     # sudo、SDDM、锁屏的 PAM 栈以 root 读取（root 不受权限限制），
     # 而 swaylock 在 niri 会话里以 baka 自己的身份运行，也需要读到它。
