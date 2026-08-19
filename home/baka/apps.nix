@@ -5,11 +5,14 @@
   home.packages = with pkgs; [
     # 通讯、协作与远程桌面。
     wechat
-    (callPackage ../../pkgs/qq.nix { })
+    qq
+    ayugram-desktop
     telegram-desktop
     feishu
+    (callPackage ../../pkgs/lark.nix { })
     wemeet
     rustdesk-flutter
+    termius
 
     # 影音、音乐与直播。
     (callPackage ../../pkgs/bilibili.nix { })
@@ -21,10 +24,21 @@
     obs-studio
 
     # 桌面工具和外观。
+    (callPackage ../../pkgs/keyguard.nix { })
     fastfetch
+    kdePackages.filelight
     kdePackages.kate
+    kdePackages.kcalc
+    kdePackages.kclock
+    kdePackages.kdf
+    kdePackages.kfind
+    kdePackages.kleopatra
+    kdePackages.kmousetool
+    kdePackages.kompare
+    kdePackages.ksystemlog
+    kdePackages.partitionmanager
     microsoft-edge
-    flameshot
+    (callPackage ../../pkgs/motrix.nix { })
     (callPackage ../../pkgs/pjsk-cursor-theme.nix { })
   ];
 }
