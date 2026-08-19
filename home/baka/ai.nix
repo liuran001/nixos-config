@@ -14,6 +14,19 @@ let
   codexHome = "${homeDirectory}/.codex";
   oapiSecretFile = "/run/agenix/oapi-api-key";
   githubSecretFile = "/run/agenix/github-token";
+  context7SecretFile = "/run/agenix/context7-api-key";
+  tinyfishSecretFile = "/run/agenix/tinyfish-api-key";
+  exaSecretFile = "/run/agenix/exa-api-key";
+  tavilySecretFile = "/run/agenix/tavily-api-key";
+
+  # MCP 服务的密钥文件表，包装器按 变量名 = 文件 注入进程环境；
+  # 新增服务只需在这里和各 harness 的 MCP 服务器表各加一行。
+  mcpSecretFiles = {
+    CONTEXT7_API_KEY = context7SecretFile;
+    TINYFISH_API_KEY = tinyfishSecretFile;
+    EXA_API_KEY = exaSecretFile;
+    TAVILY_API_KEY = tavilySecretFile;
+  };
 
   # 均来自 pkgs/overlay.nix；oh-my-claudecode 的源码输入在那里接线。
   aiTools = pkgs.bakaPackages.ai-tools;
@@ -43,32 +56,44 @@ let
   yamlFormat = pkgs.formats.yaml { };
 
   # 密钥只在目标进程启动时读取，不进入 Nix store 或全局会话环境。
+  # readSecret 生成一段 shell：读取一个 agenix 明文文件并导出到一组环境变量，
+  # 读取失败直接退出。供 mkSecretWrapper 与散装的 writeShellApplication 复用。
+  readSecret = name: file: variables: ''
+    secret_file=${lib.escapeShellArg file}
+    if [[ ! -r "$secret_file" ]]; then
+      printf '%s\n' ${lib.escapeShellArg "${name}: 无法读取 agenix 运行时密钥"} >&2
+      exit 1
+    fi
+
+    secret_value="$(<"$secret_file")"
+    if [[ -z "$secret_value" ]]; then
+      printf '%s\n' ${lib.escapeShellArg "${name}: agenix 运行时密钥为空"} >&2
+      exit 1
+    fi
+
+    ${lib.concatMapStringsSep "\n" (variable: ''export ${variable}="$secret_value"'') variables}
+    unset secret_value
+  '';
+
+  # secretFile/secretVariables 是主密钥；extraSecrets 以 变量名 = 密钥文件
+  # 的形式追加任意数量的次要密钥，读取失败同样直接退出。
   mkSecretWrapper =
     {
       name,
       executable,
       secretFile,
       secretVariables,
+      extraSecrets ? { },
       environment ? { },
       arguments ? [ ],
     }:
     pkgs.writeShellApplication {
       inherit name;
       text = ''
-        secret_file=${lib.escapeShellArg secretFile}
-        if [[ ! -r "$secret_file" ]]; then
-          printf '%s\n' ${lib.escapeShellArg "${name}: 无法读取 agenix 运行时密钥"} >&2
-          exit 1
-        fi
-
-        secret_value="$(<"$secret_file")"
-        if [[ -z "$secret_value" ]]; then
-          printf '%s\n' ${lib.escapeShellArg "${name}: agenix 运行时密钥为空"} >&2
-          exit 1
-        fi
-
-        ${lib.concatMapStringsSep "\n" (variable: ''export ${variable}="$secret_value"'') secretVariables}
-        unset secret_value
+        ${readSecret name secretFile secretVariables}
+        ${lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (variable: file: readSecret name file [ variable ]) extraSecrets
+        )}
         ${lib.concatStringsSep "\n" (
           lib.mapAttrsToList (variable: value: "export ${variable}=${lib.escapeShellArg value}") environment
         )}
@@ -101,10 +126,14 @@ let
   ];
 
   # Claude 使用官方账号登录；这里只加载 Oh My ClaudeCode 插件，不注入第三方
-  # API 密钥、端点或模型环境变量。
+  # API 密钥、端点或模型环境变量。MCP 密钥只用于 MCP 服务器认证。
   claudeWithPlugin = pkgs.writeShellApplication {
     name = "claude";
     text = ''
+      ${lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (variable: file: readSecret "claude" file [ variable ]) mcpSecretFiles
+      )}
+
       # Force the official claude.ai login path even if an old shell exported
       # API-compatible credentials from a previous NixOS generation.
       unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN ANTHROPIC_BASE_URL \
@@ -130,6 +159,7 @@ let
     executable = lib.getExe pkgs.opencode;
     secretFile = oapiSecretFile;
     secretVariables = [ "OPENAI_API_KEY" ];
+    extraSecrets = mcpSecretFiles;
     environment = {
       DO_NOT_TRACK = "1";
       OMO_DISABLE_POSTHOG = "1";
@@ -142,6 +172,7 @@ let
     executable = "${aiTools}/bin/oh-my-opencode";
     secretFile = oapiSecretFile;
     secretVariables = [ "OPENAI_API_KEY" ];
+    extraSecrets = mcpSecretFiles;
   };
 
   omoWrapper = mkSecretWrapper {
@@ -149,14 +180,15 @@ let
     executable = "${aiTools}/bin/omo-agent-toolkit";
     secretFile = oapiSecretFile;
     secretVariables = [ "OPENAI_API_KEY" ];
+    extraSecrets = mcpSecretFiles;
   };
-
 
   ompWrapper = mkSecretWrapper {
     name = "omp";
     executable = "${ompPackage}/bin/omp";
     secretFile = oapiSecretFile;
     secretVariables = [ "OPENAI_API_KEY" ];
+    extraSecrets = mcpSecretFiles;
     environment.OMP_SKIP_SETUP = "1";
   };
 
@@ -173,6 +205,7 @@ let
     executable = "${aiTools}/bin/omx";
     secretFile = oapiSecretFile;
     secretVariables = [ "OPENAI_API_KEY" ];
+    extraSecrets = mcpSecretFiles;
     environment.OMX_AUTO_UPDATE = "0";
   };
 
@@ -184,6 +217,58 @@ let
       "GH_TOKEN"
       "GITHUB_TOKEN"
     ];
+  };
+
+  # Codex 的模型提供方走 config.toml 的 auth.command 自读取，不需要 OPENAI_API_KEY；
+  # 包装器只注入 MCP 认证用的环境变量（bearer_token_env_var/env_http_headers 引用）。
+  codexWrapper = mkSecretWrapper {
+    name = "codex";
+    executable = lib.getExe pkgs.codex;
+    secretFile = context7SecretFile;
+    secretVariables = [ "CONTEXT7_API_KEY" ];
+    extraSecrets = builtins.removeAttrs mcpSecretFiles [ "CONTEXT7_API_KEY" ];
+  };
+
+  # Kimi Code 同理：官方账号登录，包装器只补 MCP 用的环境变量。
+  kimiWrapper = mkSecretWrapper {
+    name = "kimi";
+    executable = lib.getExe kimiPackage;
+    secretFile = context7SecretFile;
+    secretVariables = [ "CONTEXT7_API_KEY" ];
+    extraSecrets = builtins.removeAttrs mcpSecretFiles [ "CONTEXT7_API_KEY" ];
+  };
+
+  # MCP 服务器定义：harness 之间只是占位符语法不同，共用同一组 URL 与
+  # 环境变量引用，明文不落盘。
+  context7McpUrl = "https://mcp.context7.com/mcp";
+  context7McpAuthHeader = "Bearer \${CONTEXT7_API_KEY}";
+  tinyfishMcpUrl = "https://agent.tinyfish.ai/mcp";
+  exaMcpUrl = "https://mcp.exa.ai/mcp";
+  tavilyMcpUrl = "https://mcp.tavily.com/mcp";
+
+  # ${VAR} 展开语法的服务器表，omp 与 kimi 的 mcp.json 共用；
+  # tinyfish 用 X-API-Key 头，其余用 Bearer。
+  dollarMcpServers = {
+    context7 = {
+      type = "http";
+      url = context7McpUrl;
+      headers.Authorization = context7McpAuthHeader;
+    };
+    tinyfish = {
+      type = "http";
+      url = tinyfishMcpUrl;
+      headers."X-API-Key" = "\${TINYFISH_API_KEY}";
+    };
+    exa = {
+      type = "http";
+      url = exaMcpUrl;
+      headers.Authorization = "Bearer \${EXA_API_KEY}";
+    };
+    tavily = {
+      type = "http";
+      url = tavilyMcpUrl;
+      headers.Authorization = "Bearer \${TAVILY_API_KEY}";
+    };
   };
 
   codexConfigBase = tomlFormat.generate "codex-config-base.toml" {
@@ -235,6 +320,27 @@ let
 
     shell_environment_policy.set.USE_OMX_EXPLORE_CMD = "0";
 
+    # 远程 MCP 服务器；codex 从环境变量取认证值（Bearer 用 bearer_token_env_var，
+    # 自定义头用 env_http_headers），明文不进 config.toml。
+    mcp_servers = {
+      context7 = {
+        url = context7McpUrl;
+        bearer_token_env_var = "CONTEXT7_API_KEY";
+      };
+      tinyfish = {
+        url = tinyfishMcpUrl;
+        env_http_headers."X-API-Key" = "TINYFISH_API_KEY";
+      };
+      exa = {
+        url = exaMcpUrl;
+        bearer_token_env_var = "EXA_API_KEY";
+      };
+      tavily = {
+        url = tavilyMcpUrl;
+        bearer_token_env_var = "TAVILY_API_KEY";
+      };
+    };
+
     analytics.enabled = false;
     feedback.enabled = false;
     otel = {
@@ -261,8 +367,6 @@ let
       ${aiTools}/share/oh-my-codex/hooks-trust.toml.in >> "$out"
   '';
 
-
-
   ompModels = yamlFormat.generate "omp-models.yml" {
     providers.obdo = {
       baseUrl = apiBaseUrl;
@@ -271,6 +375,36 @@ let
       # omp 原生支持从 OpenAI 兼容端点动态发现模型；已知模型（如
       # gpt-5.6-sol）的 reasoning/上下文窗口等元数据从内置 catalog 继承。
       discovery.type = "openai-models-list";
+    };
+  };
+
+  # OMP 原生 MCP 支持：~/.omp/agent/mcp.json，type 必须是 http，
+  # ${VAR} 在连接时从进程环境展开。
+  ompMcp = jsonFormat.generate "omp-mcp.json" {
+    mcpServers = dollarMcpServers;
+  };
+
+  # Kimi Code 的用户级 MCP 配置。注意 kimi 的 mcp.json 不做 ${VAR} 展开
+  # （会把字面量发出去导致 401），静态 Bearer 一律用 bearerTokenEnvVar
+  # 引用环境变量；tinyfish 的 API key 同样接受 Bearer 形式。
+  kimiMcp = jsonFormat.generate "kimi-mcp.json" {
+    mcpServers = {
+      context7 = {
+        url = context7McpUrl;
+        bearerTokenEnvVar = "CONTEXT7_API_KEY";
+      };
+      tinyfish = {
+        url = tinyfishMcpUrl;
+        bearerTokenEnvVar = "TINYFISH_API_KEY";
+      };
+      exa = {
+        url = exaMcpUrl;
+        bearerTokenEnvVar = "EXA_API_KEY";
+      };
+      tavily = {
+        url = tavilyMcpUrl;
+        bearerTokenEnvVar = "TAVILY_API_KEY";
+      };
     };
   };
 
@@ -283,6 +417,30 @@ let
       opencodeClaudeAuthPlugin
       opencodeModelsDiscoveryPlugin
     ];
+    # 远程 MCP 服务器，opencode 内所有 agent 共用；key 由包装器运行时注入，
+    # 配置里只放 {env:} 占位符，明文不落 Nix store。
+    mcp = {
+      context7 = {
+        type = "remote";
+        url = context7McpUrl;
+        headers.Authorization = "Bearer {env:CONTEXT7_API_KEY}";
+      };
+      tinyfish = {
+        type = "remote";
+        url = tinyfishMcpUrl;
+        headers."X-API-Key" = "{env:TINYFISH_API_KEY}";
+      };
+      exa = {
+        type = "remote";
+        url = exaMcpUrl;
+        headers.Authorization = "Bearer {env:EXA_API_KEY}";
+      };
+      tavily = {
+        type = "remote";
+        url = tavilyMcpUrl;
+        headers.Authorization = "Bearer {env:TAVILY_API_KEY}";
+      };
+    };
     provider.obdo = {
       name = "Baka API";
       npm = "@ai-sdk/openai";
@@ -352,6 +510,13 @@ let
       telemetry = false;
       agents = omoAgentOverrides;
       categories = omoCategoryOverrides;
+      # git-master 技能默认给每个提交附加 “Ultraworked with Sisyphus” 尾注和
+      # Co-authored-by trailer；本仓库提交不携带 AI 署名。
+      git_master = {
+        commit_footer = false;
+        include_co_authored_by = false;
+        git_env_prefix = "GIT_MASTER=1";
+      };
     };
   };
 
@@ -387,11 +552,11 @@ let
 in
 {
   home.packages = [
-    pkgs.codex
     claudeWithPlugin
+    codexWrapper
     dshWrapper
     ghWrapper
-    kimiPackage
+    kimiWrapper
     ohMyOpenCodeWrapper
     ohMyClaudeCode
     omoWrapper
@@ -418,6 +583,8 @@ in
     ".codex/.omx/native-agents.json".source = "${aiTools}/share/oh-my-codex/.omx/native-agents.json";
 
     ".dsh/cordis.patch.yml".source = deepseekHarnessPatch;
+    ".kimi-code/mcp.json".source = kimiMcp;
+    ".omp/agent/mcp.json".source = ompMcp;
     ".omp/agent/models.yml".source = ompModels;
     ".omo/omo.json".source = omoConfig;
   };
