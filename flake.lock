@@ -186,11 +186,11 @@
       },
       "locked": {
         "dir": "nixos",
-        "lastModified": 1787126686,
-        "narHash": "sha256-hTn6Xyt7oLCOcWQVE0qkW6GjFj7TWFAdp8m3jWRWFdk=",
+        "lastModified": 1787134710,
+        "narHash": "sha256-VzZMK/pv+NGfLPbhFK/s8xE6axVS0wLhtOhUnrW2Nng=",
         "ref": "master",
-        "rev": "24c0de6b8d5d998a0a1d0336b4da6ac520b054c9",
-        "revCount": 315,
+        "rev": "651572ac6255489fa3a9bd753ddf769f5c226453",
+        "revCount": 321,
         "type": "git",
         "url": "https://github.com/utajum/g-helper-linux.git"
       },
@@ -303,11 +303,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1787134862,
-        "narHash": "sha256-FiyMnOdyy+bQJx+t/kJLVjNetHyVjXYhwiSa4aWbyj0=",
+        "lastModified": 1787136491,
+        "narHash": "sha256-4ffZoaprz5rXso4xc9JIKpebB7yxzM4S3nK+/ObQKZ8=",
         "owner": "can1357",
         "repo": "oh-my-pi",
-        "rev": "5fb8d1f8bf05e3af1be69fe28083c9847fefba71",
+        "rev": "858f7dd91fff9b84cf8a2c6a6bb85aa0e6d03a55",
         "type": "github"
       },
       "original": {
@@ -335,11 +335,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1787108576,
-        "narHash": "sha256-WLhxXPMCzbeufsDZxdzkurLGBq74GX+JgLX8fFy6HZs=",
+        "lastModified": 1786507911,
+        "narHash": "sha256-w5aZRLbiu7H6TqsYXVMdRKg0S4DRaJpxyqxx86AwxVk=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "99607a06c2ea1290cd3258c11d1416dde9201f94",
+        "rev": "39db48099ad16834af7e27485a4babf9c28b3897",
         "type": "github"
       },
       "original": {
