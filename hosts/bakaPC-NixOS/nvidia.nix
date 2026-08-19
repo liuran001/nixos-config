@@ -16,8 +16,9 @@
     open = true;
     # 安装 nvidia-settings 图形设置面板。
     nvidiaSettings = true;
-    # 使用当前内核对应的稳定版驱动。
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
+    # Blackwell 配合最新内核优先使用 nixpkgs 当前的新驱动分支；
+    # 具体版本仍由 flake.lock 固定，更新失败时可以回退上一代系统。
+    package = config.boot.kernelPackages.nvidiaPackages.latest;
     # 混合显卡 PRIME 卸载模式。
     prime = {
       offload = {

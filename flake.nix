@@ -5,13 +5,12 @@
   description = "baka 的 NixOS 系统配置";
 
   inputs = {
-    # 与安装时使用的 channel 保持一致；锁定版本记录在 flake.lock 中。
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    # 家用桌面优先获取新内核、驱动与应用；flake.lock 保留当前可复现快照。
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    # home-manager：管理用户级配置（~/.config 点文件等），版本与 nixpkgs 保持一致，
-    # 并共用同一份 nixpkgs，避免重复求值。
+    # Home Manager 跟随主线，并共用同一份 nixpkgs，避免重复求值。
     home-manager = {
-      url = "github:nix-community/home-manager/release-26.05";
+      url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -24,7 +23,23 @@
 
     # Codex Desktop 的社区 Nix 封装；跟随上游 main。
     # flake.lock 仍保留可复现快照，运行 `nix flake update` 时再前进到最新提交。
-    codex-desktop-linux.url = "github:ilysenko/codex-desktop-linux";
+    codex-desktop-linux = {
+      url = "github:ilysenko/codex-desktop-linux";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Claude Code 编排插件直接跟随上游源码；具体提交仍由 lock 文件记录。
+    oh-my-claudecode = {
+      url = "github:Yeachan-Heo/oh-my-claudecode";
+      flake = false;
+    };
+
+    # ASUS 笔记本控制工具；使用上游 NixOS 子 Flake，并通过锁文件跟随 master 更新。
+    g-helper-linux = {
+      # git URL 不依赖 GitHub API 限流；更新时仍解析 master 的最新提交。
+      url = "git+https://github.com/utajum/g-helper-linux.git?ref=master&dir=nixos";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Oh My Pi 自带 Home Manager 模块；跟随上游并复用本仓库的 nixpkgs。
     omp = {
@@ -39,6 +54,8 @@
       home-manager,
       agenix,
       codex-desktop-linux,
+      g-helper-linux,
+      oh-my-claudecode,
       omp,
       ...
     }:
@@ -57,7 +74,8 @@
       nixosConfiguration = nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = {
-          inherit codex-desktop-linux omp;
+          inherit codex-desktop-linux g-helper-linux omp;
+          ohMyClaudeCodeSource = oh-my-claudecode;
         };
         modules = [
           ./hosts/bakaPC-NixOS

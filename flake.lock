@@ -76,7 +76,9 @@
     "codex-desktop-linux": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": [
+          "nixpkgs"
+        ]
       },
       "locked": {
         "lastModified": 1787079200,
@@ -176,6 +178,29 @@
         "type": "github"
       }
     },
+    "g-helper-linux": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "nixos",
+        "lastModified": 1787126686,
+        "narHash": "sha256-hTn6Xyt7oLCOcWQVE0qkW6GjFj7TWFAdp8m3jWRWFdk=",
+        "ref": "master",
+        "rev": "24c0de6b8d5d998a0a1d0336b4da6ac520b054c9",
+        "revCount": 315,
+        "type": "git",
+        "url": "https://github.com/utajum/g-helper-linux.git"
+      },
+      "original": {
+        "dir": "nixos",
+        "ref": "master",
+        "type": "git",
+        "url": "https://github.com/utajum/g-helper-linux.git"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -183,16 +208,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1786924861,
-        "narHash": "sha256-hftabkb+73OcGzvwFAjCiQorAhprs9TnU1+FkGO5CIw=",
+        "lastModified": 1786999651,
+        "narHash": "sha256-MTGMFlLDTklsXhCp4r5GXB4VAVadPdalXLvUjd/K7h0=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "09ae1b85a6db412d841d60f924b23f881f0d0a38",
+        "rev": "353742587cbaf079b3caee743115d037bc51fea6",
         "type": "github"
       },
       "original": {
         "owner": "nix-community",
-        "ref": "release-26.05",
+        "ref": "master",
         "repo": "home-manager",
         "type": "github"
       }
@@ -220,11 +245,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1772773019,
-        "narHash": "sha256-E1bxHxNKfDoQUuvriG71+f+s/NT0qWkImXsYZNFFfCs=",
+        "lastModified": 1787070829,
+        "narHash": "sha256-vXNVDVtvfiQuXthP0NHPFdNvvMTkGpx0UP8oddIWbNk=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "aca4d95fce4914b3892661bcb80b8087293536c6",
+        "rev": "0ae2bc1419c3f345984c2629e72e7a631820fa4d",
         "type": "github"
       },
       "original": {
@@ -250,19 +275,19 @@
         "type": "github"
       }
     },
-    "nixpkgs_2": {
+    "oh-my-claudecode": {
+      "flake": false,
       "locked": {
-        "lastModified": 1787042014,
-        "narHash": "sha256-lgnV/xeEatfEnPZG0RrXS0fhcr63p3tsVvL1GdaVkJQ=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "c69ae8fb8faeb3472fd11234ba55a70ac3601f9b",
+        "lastModified": 1786586109,
+        "narHash": "sha256-LtaQ/WRb+IeiRtZE+hK+rzJNpPmyT07aBO9rV8cIomk=",
+        "owner": "Yeachan-Heo",
+        "repo": "oh-my-claudecode",
+        "rev": "5aa678c6f7a769df84561d9486d8e9e30b68c3dc",
         "type": "github"
       },
       "original": {
-        "owner": "NixOS",
-        "ref": "nixos-26.05",
-        "repo": "nixpkgs",
+        "owner": "Yeachan-Heo",
+        "repo": "oh-my-claudecode",
         "type": "github"
       }
     },
@@ -278,11 +303,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1787093810,
-        "narHash": "sha256-Bj4ZaL8/Wdsxf1lB/k9JFC/vKERZKmm6OP3qICIZK1E=",
+        "lastModified": 1787102450,
+        "narHash": "sha256-c+VBZdUoqbwwe8dlYS/2ddeL15OAWV21eIB6bclh0Z8=",
         "owner": "can1357",
         "repo": "oh-my-pi",
-        "rev": "565d53515b54df32fada2564d1fe9caf1a17b738",
+        "rev": "d94bdfa1bb25e50cf90fb57fefb1863e5aef86fc",
         "type": "github"
       },
       "original": {
@@ -295,8 +320,10 @@
       "inputs": {
         "agenix": "agenix",
         "codex-desktop-linux": "codex-desktop-linux",
+        "g-helper-linux": "g-helper-linux",
         "home-manager": "home-manager",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs",
+        "oh-my-claudecode": "oh-my-claudecode",
         "omp": "omp"
       }
     },
