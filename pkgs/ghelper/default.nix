@@ -118,28 +118,27 @@ let
       let
         dedupe =
           list:
-          (
-            lib.foldl'
-              (
-                acc: pkg:
-                let
-                  key = lib.toLower "${pkg.pname or ""}/${pkg.version or ""}";
-                in
-                if pkg ? pname && pkg ? version && builtins.hasAttr key acc.seen then
-                  acc
-                else
-                  {
-                    seen = acc.seen // {
-                      ${key} = true;
-                    };
-                    list = acc.list ++ [ pkg ];
-                  }
-              )
-              {
-                seen = { };
-                list = [ ];
-              }
-              list
+          (lib.foldl'
+            (
+              acc: pkg:
+              let
+                key = lib.toLower "${pkg.pname or ""}/${pkg.version or ""}";
+              in
+              if pkg ? pname && pkg ? version && builtins.hasAttr key acc.seen then
+                acc
+              else
+                {
+                  seen = acc.seen // {
+                    ${key} = true;
+                  };
+                  list = acc.list ++ [ pkg ];
+                }
+            )
+            {
+              seen = { };
+              list = [ ];
+            }
+            list
           ).list;
       in
       dedupe (oldAttrs.buildInputs ++ extraNugetPackages);
