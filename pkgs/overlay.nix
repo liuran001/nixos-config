@@ -24,5 +24,7 @@ _final: prev: {
     open-orpheus = prev.callPackage ./open-orpheus.nix { };
     pjsk-cursor-theme = prev.callPackage ./pjsk-cursor-theme.nix { };
     splayer-next = prev.callPackage ./splayer-next.nix { };
+    # 在 nixpkgs 的微信之上补输入法环境变量，不改动上游包本身。
+    wechat = prev.callPackage ./wechat.nix { };
   };
 }

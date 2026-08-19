@@ -5,7 +5,7 @@
 {
   home.packages = with pkgs; [
     # 通讯、协作与远程桌面。
-    wechat
+    bakaPackages.wechat # 官方包外加了 QT_IM_MODULE，否则无法输入中文
     qq
     ayugram-desktop
     telegram-desktop
