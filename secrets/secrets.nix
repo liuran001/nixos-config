@@ -26,6 +26,8 @@ let
       ];
 in
 {
+  "mihomo-config.age".publicKeys = recipients;
+  "mihomo-ssid-direct.age".publicKeys = recipients;
   "github-token.age".publicKeys = recipients;
   "oapi-api-key.age".publicKeys = recipients;
   "context7-api-key.age".publicKeys = recipients;

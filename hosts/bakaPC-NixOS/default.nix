@@ -16,6 +16,7 @@
     ./networking.nix
     ./nvidia.nix
     ./secrets.nix
+    ./mihomo.nix
     ./storage.nix
     ./users.nix
 
