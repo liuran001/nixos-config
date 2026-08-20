@@ -28,6 +28,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Claude Desktop 的社区 Debian 封装；复用本仓库的 nixpkgs。
+    claude-desktop-debian = {
+      url = "github:aaddrick/claude-desktop-debian";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Claude Code 编排插件直接跟随上游源码；具体提交仍由 lock 文件记录。
     oh-my-claudecode = {
       url = "github:Yeachan-Heo/oh-my-claudecode";
@@ -54,6 +60,7 @@
       home-manager,
       agenix,
       codex-desktop-linux,
+      claude-desktop-debian,
       g-helper-linux,
       oh-my-claudecode,
       omp,
@@ -69,7 +76,10 @@
       bakaOverlay = import ./pkgs/overlay.nix { ohMyClaudeCodeSource = oh-my-claudecode; };
       bakaPkgs = import nixpkgs {
         inherit system;
-        overlays = [ bakaOverlay ];
+        overlays = [
+          bakaOverlay
+          claude-desktop-debian.overlays.default
+        ];
         # 与 modules/packages.nix 保持一致，否则 Edge、VS Code 等包无法单独构建。
         config.allowUnfree = true;
       };
@@ -88,7 +98,12 @@
         # oh-my-claudecode 的源码不再透传给模块，它由 pkgs/overlay.nix 接线。
         specialArgs = { inherit codex-desktop-linux g-helper-linux omp; };
         modules = [
-          { nixpkgs.overlays = [ bakaOverlay ]; }
+          {
+            nixpkgs.overlays = [
+              bakaOverlay
+              claude-desktop-debian.overlays.default
+            ];
+          }
           ./hosts/bakaPC-NixOS
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager

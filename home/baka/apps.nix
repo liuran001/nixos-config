@@ -14,6 +14,7 @@
     wemeet
     rustdesk-flutter
     termius
+    claude-desktop
 
     # 影音、音乐与直播。
     bakaPackages.bilibili
