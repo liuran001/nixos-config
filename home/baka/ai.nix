@@ -242,6 +242,10 @@ let
     secretFile = oapiSecretFile;
     secretVariables = [ "OPENAI_API_KEY" ];
     extraSecrets = mcpSecretFiles;
+    environment = {
+      OPENCHAMBER_HOST = "0.0.0.0";
+      OPENCHAMBER_ALLOW_UNAUTHENTICATED_LAN = "true";
+    };
   };
 
   ghWrapper = mkSecretWrapper {

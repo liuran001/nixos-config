@@ -17,6 +17,12 @@
   # 启用 Tailscale 组网服务。
   services.tailscale.enable = true;
 
+  # OpenChamber Web 只允许从当前无线局域网和 Tailscale 访问。
+  networking.firewall.interfaces = {
+    wlp128s20f3.allowedTCPPorts = [ 3000 ];
+    tailscale0.allowedTCPPorts = [ 3000 ];
+  };
+
   # NixOS 默认启用防火墙。服务器程序需要从其他设备访问时，可在这里开放对应的 TCP 或 UDP 端口。
   # networking.firewall.allowedTCPPorts = [ ... ];
   # networking.firewall.allowedUDPPorts = [ ... ];
