@@ -27,8 +27,10 @@
 #    微信把汉仪「WeChat Sans」的 Light 字重打进了 Qt
 #    资源（二进制里可见 :gui/fonts/WeChatSansSS/WeChatSansSS-Light.ttf），
 #    由 QFontDatabase 从资源加载，fontconfig 无法全局替换。聊天输入区是 Qt
-#    文本编辑控件，下面用局部 QSS 让它改用系统的 Noto Sans CJK SC Medium；
-#    其他标签、消息和菜单仍使用微信自己的字体。
+#    文本编辑控件，下面用局部 QSS 提高字重，但不指定字体族，以保留包括
+#    Noto Color Emoji 在内的系统字体回退；其他标签、消息和菜单不受影响。
+#    Qt 5 不识别 emoji 通用字体族，因此 wrapper 还给微信单独追加 Emoji 回退，
+#    不修改系统级 fontconfig。
 #
 # modules/i18n.nix 使用 Wayland 原生输入法前端，有意不设置全局 QT_IM_MODULE
 # 和 GTK_IM_MODULE（避免干扰原生 Wayland 程序），所以这些变量只在这里、
@@ -53,9 +55,22 @@ let
   '';
   wechatInputStyle = writeText "wechat-input-font.qss" ''
     QTextEdit, QPlainTextEdit {
-      font-family: "Noto Sans CJK SC";
       font-weight: 500;
     }
+  '';
+  wechatFontConfig = writeText "wechat-fontconfig.conf" ''
+    <?xml version="1.0"?>
+    <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+    <fontconfig>
+      <include>/etc/fonts/fonts.conf</include>
+
+      <!-- Qt 5 does not add the emoji family to its fallback list. -->
+      <match target="pattern">
+        <edit name="family" mode="append" binding="same">
+          <string>Noto Color Emoji</string>
+        </edit>
+      </match>
+    </fontconfig>
   '';
 in
 symlinkJoin {
@@ -78,6 +93,7 @@ symlinkJoin {
     rm "$out/bin/wechat"
     makeWrapper ${lib.getExe wechat} "$out/bin/wechat" \
       --add-flags "-stylesheet ${wechatInputStyle}" \
+      --set-default FONTCONFIG_FILE ${wechatFontConfig} \
       --set-default QT_AUTO_SCREEN_SCALE_FACTOR 1 \
       --set-default QT_SCALE_FACTOR_ROUNDING_POLICY PassThrough \
       --set-default QT_IM_MODULE fcitx \
