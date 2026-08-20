@@ -20,6 +20,7 @@
     ./users.nix
 
     # 可复用于其他主机的系统功能。
+    ../../modules/claude-code.nix
     ../../modules/desktop.nix
     ../../modules/fonts.nix
     ../../modules/gaming.nix
