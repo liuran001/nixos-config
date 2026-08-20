@@ -45,8 +45,8 @@ let
   ompPackage = omp.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
     bun = ompBun;
   };
-  ohMyOpenCodeRoot = "${aiTools}/lib/node_modules/nixos-ai-tools/node_modules/oh-my-opencode";
-  ohMyOpenCodePlugin = "file://${ohMyOpenCodeRoot}";
+  ohMyOpenCodeSlimRoot = "${aiTools}/lib/node_modules/nixos-ai-tools/node_modules/oh-my-opencode-slim";
+  ohMyOpenCodeSlimPlugin = "file://${ohMyOpenCodeSlimRoot}";
   # 复用 Claude Code 官方登录的 OAuth 凭据，为 OpenCode 提供 anthropic provider。
   opencodeClaudeAuthPlugin = "file://${pkgs.bakaPackages.opencode-claude-auth}";
   # 启动时从 /v1/models 动态发现模型列表，替代写死的 models 表。
@@ -163,22 +163,17 @@ let
     extraSecrets = mcpSecretFiles;
     environment = {
       DO_NOT_TRACK = "1";
-      OMO_DISABLE_POSTHOG = "1";
-      OMO_SEND_ANONYMOUS_TELEMETRY = "0";
+      # OMO Slim 默认把专家任务派给后台子代理，这在 opencode 里还是实验特性，
+      # 未开启时 orchestrator 无法派活（官方安装器把它写进 shell rc）。
+      OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS = "true";
     };
   };
 
-  ohMyOpenCodeWrapper = mkSecretWrapper {
-    name = "oh-my-opencode";
-    executable = "${aiTools}/bin/oh-my-opencode";
-    secretFile = oapiSecretFile;
-    secretVariables = [ "OPENAI_API_KEY" ];
-    extraSecrets = mcpSecretFiles;
-  };
-
-  omoWrapper = mkSecretWrapper {
-    name = "omo-agent-toolkit";
-    executable = "${aiTools}/bin/omo-agent-toolkit";
+  # 插件本体由 opencode 加载；这个 CLI 只用于 `oh-my-opencode-slim doctor`
+  # 这类只读诊断，配置仍由下面的 ohMyOpenCodeSlimConfig 声明式生成。
+  ohMyOpenCodeSlimWrapper = mkSecretWrapper {
+    name = "oh-my-opencode-slim";
+    executable = "${aiTools}/bin/oh-my-opencode-slim";
     secretFile = oapiSecretFile;
     secretVariables = [ "OPENAI_API_KEY" ];
     extraSecrets = mcpSecretFiles;
@@ -225,6 +220,7 @@ let
     secretFile = oapiSecretFile;
     secretVariables = [ "OPENAI_API_KEY" ];
     extraSecrets = mcpSecretFiles;
+    environment.OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS = "true";
   };
 
   # .desktop 里的 Exec=openchamber-desktop 按 PATH 解析，所以 profile 里的
@@ -245,6 +241,7 @@ let
     environment = {
       OPENCHAMBER_HOST = "0.0.0.0";
       OPENCHAMBER_ALLOW_UNAUTHENTICATED_LAN = "true";
+      OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS = "true";
     };
   };
 
@@ -483,10 +480,16 @@ let
     autoupdate = false;
     share = "disabled";
     plugin = [
-      ohMyOpenCodePlugin
+      ohMyOpenCodeSlimPlugin
       opencodeClaudeAuthPlugin
       opencodeModelsDiscoveryPlugin
     ];
+    # opencode 内置的 explore/general 与 OMO Slim 的 explorer 职责重复，
+    # 官方安装器同样会关掉它们。
+    agent = {
+      explore.disable = true;
+      general.disable = true;
+    };
     # 远程 MCP 服务器，opencode 内所有 agent 共用；key 由包装器运行时注入，
     # 配置里只放 {env:} 占位符，明文不落 Nix store。
     mcp = {
@@ -553,74 +556,41 @@ let
 
   opencodeTuiConfig = jsonFormat.generate "opencode-tui.json" {
     plugin = [
-      ohMyOpenCodePlugin
+      ohMyOpenCodeSlimPlugin
       opencodeModelsDiscoveryPlugin
     ];
   };
 
-  omoAgentOverrides =
-    (lib.genAttrs
-      [
-        "OpenCode-Builder"
-        "atlas"
-        "build"
-        "explore"
-        "hephaestus"
-        "metis"
-        "momus"
-        "multimodal-looker"
-        "oracle"
-        "plan"
-        "prometheus"
-        "sisyphus"
-        "sisyphus-junior"
-      ]
-      (_: {
-        model = "obdo/${defaultModel}";
-        reasoning = "xhigh";
-      })
-    )
-    // {
-      librarian = {
-        model = "obdo/${librarianModel}";
-        reasoning = "xhigh";
+  # OMO Slim 的配置读自 ~/.config/opencode/oh-my-opencode-slim.json，按 preset
+  # 组织每个 agent 的模型；agent 名取自插件内置的 orchestrator 与六个专家。
+  ohMyOpenCodeSlimConfig = jsonFormat.generate "oh-my-opencode-slim.json" {
+    # 包由 Nix 固定、配置由 Home Manager 只读管理，自更新只会失败。
+    autoUpdate = false;
+    # 插件内置的 context7 以 CONTEXT7_API_KEY 作请求头名，且与 opencode.json 里
+    # 走 Bearer 认证的同名服务重复；统一用后者，只留免费的 gh_grep。
+    disabled_mcps = [ "context7" ];
+    preset = "obdo";
+    presets.obdo =
+      (lib.genAttrs
+        [
+          "orchestrator"
+          "oracle"
+          "explorer"
+          "designer"
+          "fixer"
+        ]
+        (_: {
+          model = "obdo/${defaultModel}";
+        })
+      )
+      // {
+        # 文档检索交给便宜的长上下文模型，并放开全部检索类 MCP
+        # （默认只有 context7 与 gh_grep）。
+        librarian = {
+          model = "obdo/${librarianModel}";
+          mcps = [ "*" ];
+        };
       };
-    };
-
-  omoCategoryOverrides =
-    lib.genAttrs
-      [
-        "visual-engineering"
-        "ultrabrain"
-        "deep"
-        "artistry"
-        "quick"
-        "unspecified-low"
-        "unspecified-high"
-        "writing"
-      ]
-      (_: {
-        model = "obdo/${defaultModel}";
-        reasoning = "xhigh";
-      });
-
-  # OMO 5.x 的统一配置位于 ~/.omo；[opencode] 保存 OpenCode harness 专属覆盖。
-  omoConfig = jsonFormat.generate "omo.json" {
-    # 配置由 Home Manager 只读管理；声明已采用当前统一 reasoning 格式，避免启动时尝试原地迁移。
-    _migrations = [ "2026-08-reasoning-unification" ];
-    "[opencode]" = {
-      auto_update = false;
-      telemetry = false;
-      agents = omoAgentOverrides;
-      categories = omoCategoryOverrides;
-      # git-master 技能默认给每个提交附加 “Ultraworked with Sisyphus” 尾注和
-      # Co-authored-by trailer；本仓库提交不携带 AI 署名。
-      git_master = {
-        commit_footer = false;
-        include_co_authored_by = false;
-        git_env_prefix = "GIT_MASTER=1";
-      };
-    };
   };
 
   deepseekHarnessPatch = yamlFormat.generate "cordis.patch.yml" [
@@ -660,9 +630,8 @@ in
     dshWrapper
     ghWrapper
     kimiWrapper
-    ohMyOpenCodeWrapper
     ohMyClaudeCode
-    omoWrapper
+    ohMyOpenCodeSlimWrapper
     omxWrapper
     openchamberDesktop
     openchamberWrapper
@@ -691,12 +660,12 @@ in
     ".kimi-code/mcp.json".source = kimiMcp;
     ".omp/agent/mcp.json".source = ompMcp;
     ".omp/agent/models.yml".source = ompModels;
-    ".omo/omo.json".source = omoConfig;
   };
 
   xdg.configFile = {
     "opencode/opencode.json".source = opencodeConfig;
     "opencode/tui.json".source = opencodeTuiConfig;
+    "opencode/oh-my-opencode-slim.json".source = ohMyOpenCodeSlimConfig;
   };
 
   programs.omp = {

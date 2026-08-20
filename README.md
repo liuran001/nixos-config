@@ -88,7 +88,7 @@ DeepSeek Harness 单独使用 `deepseek-v4-pro`。Claude Code 与 Kimi Code 不�
 
 - Codex CLI、Codex Desktop 与 Oh My Codex（`omx`）；
 - Claude Code 与 Oh My ClaudeCode（`claude`、`omc`）；
-- OpenCode 与 Oh My OpenCode（`opencode`、`oh-my-opencode`、`omo-agent-toolkit`）；
+- OpenCode 与 Oh My OpenCode Slim（`opencode`、`oh-my-opencode-slim`）；
 - Pi 与 Oh My Pi（`pi`、`omp`）；
 - DeepSeek Harness（`dsh`）和 Kimi Code。
 

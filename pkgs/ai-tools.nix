@@ -1,8 +1,7 @@
-# 固定发布版 npm 包，供 DeepSeek Harness、Oh My Codex 和 Oh My OpenCode 使用。
+# 固定发布版 npm 包，供 DeepSeek Harness、Oh My Codex 和 Oh My OpenCode Slim 使用。
 # package-lock.json 带 registry integrity，构建时不会执行第三方安装脚本。
 {
   buildNpmPackage,
-  bun,
   codex,
   lib,
   makeWrapper,
@@ -17,7 +16,7 @@ buildNpmPackage {
   src = ./ai-tools;
 
   nodejs = nodejs_24;
-  npmDepsHash = "sha256-PXPwd6BXRWRcqGjOYBZqz7kFyU90wx8/O1NMKIrovgE=";
+  npmDepsHash = "sha256-sohs8XbS6xVsM+AkwF83YatdEkl0XG9HkgNipxviTt8=";
   npmFlags = [ "--ignore-scripts" ];
   dontNpmBuild = true;
   dontNpmPrune = true;
@@ -48,22 +47,12 @@ buildNpmPackage {
           tmux
         ]
       }
-    makeWrapper ${lib.getExe nodejs_24} "$out/bin/oh-my-opencode" \
-      --add-flags "$packageRoot/oh-my-opencode/bin/oh-my-opencode.js" \
-      --set-default DO_NOT_TRACK 1 \
-      --set-default OMO_DISABLE_POSTHOG 1 \
-      --set-default OMO_SEND_ANONYMOUS_TELEMETRY 0 \
-      --prefix PATH : ${
-        lib.makeBinPath [
-          bun
-          nodejs_24
-        ]
-      }
 
-    ln -s oh-my-opencode "$out/bin/oh-my-openagent"
-    ln -s oh-my-opencode "$out/bin/omo-agent-toolkit"
-    ln -s oh-my-opencode "$out/bin/lazycodex"
-    ln -s oh-my-opencode "$out/bin/lazycodex-ai"
+    # OMO Slim 的 CLI 只用于 doctor 等只读诊断：安装与配置改由 Home Manager
+    # 声明式生成，因此不需要它的 install 子命令，也不需要 bun。
+    makeWrapper ${lib.getExe nodejs_24} "$out/bin/oh-my-opencode-slim" \
+      --add-flags "$packageRoot/oh-my-opencode-slim/dist/cli/index.js" \
+      --prefix PATH : ${lib.makeBinPath [ nodejs_24 ]}
 
     # 以 legacy 用户模式离线生成 OMX 的技能、角色与全局编排说明；
     # 用户的 config.toml 由 Home Manager 生成；这里保留完整运行资源，
@@ -101,11 +90,8 @@ buildNpmPackage {
 
   meta = {
     description = "Pinned runtime bundle for declarative AI agent tools";
-    # DSH/OMX are MIT; Oh My OpenCode 5.x uses SUL-1.0.
-    license = [
-      lib.licenses.mit
-      lib.licenses.sustainableUse
-    ];
+    # DSH, OMX and OMO Slim are all MIT.
+    license = lib.licenses.mit;
     platforms = lib.platforms.linux;
   };
 }
