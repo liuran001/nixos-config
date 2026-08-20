@@ -562,7 +562,7 @@ let
   };
 
   # OMO Slim 的配置读自 ~/.config/opencode/oh-my-opencode-slim.json，按 preset
-  # 组织每个 agent 的模型；agent 名取自插件内置的 orchestrator 与六个专家。
+  # 组织每个 agent 的模型和思考强度；agent 名取自插件内置的 orchestrator 与专家。
   ohMyOpenCodeSlimConfig = jsonFormat.generate "oh-my-opencode-slim.json" {
     # 包由 Nix 固定、配置由 Home Manager 只读管理，自更新只会失败。
     autoUpdate = false;
@@ -581,6 +581,7 @@ let
         ]
         (_: {
           model = "obdo/${defaultModel}";
+          variant = "xhigh";
         })
       )
       // {
@@ -588,6 +589,7 @@ let
         # （默认只有 context7 与 gh_grep）。
         librarian = {
           model = "obdo/${librarianModel}";
+          variant = "xhigh";
           mcps = [ "*" ];
         };
       };
