@@ -6,6 +6,9 @@
     # 显式包含 pip；项目依赖仍应安装到 venv，而不是写入只读的 Nix store。
     (python3.withPackages (pythonPackages: [ pythonPackages.pip ]))
     nodejs
+    # 工具链自带 GOTOOLCHAIN 机制：go.mod 声明的版本高于此处的 go 时会自动下载
+    # 对应版本到 GOPATH，因此不必为个别项目在这里钉死某个 go_1_xx。
+    go
     # OpenChamber Web CLI 同样在 home/baka/ai.nix 安装，原因见那里的包装器注释。
     ast-grep
     # 命令行音视频转码；核显的 VA-API 栈见 hosts/bakaPC-NixOS/graphics.nix，
