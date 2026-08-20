@@ -1,0 +1,613 @@
+diff --git a/kernel/Kbuild b/kernel/Kbuild
+index fd31bb5..f76790f 100644
+--- a/kernel/Kbuild
++++ b/kernel/Kbuild
+@@ -36,9 +36,11 @@ kernelsu-objs += policy/feature.o
+ kernelsu-objs += runtime/boot_event.o
+ kernelsu-objs += runtime/ksud_integration.o
+ 
++ifeq ($(CONFIG_KSU_SELINUX),y)
+ kernelsu-objs += selinux/selinux.o
+ kernelsu-objs += selinux/rules.o
+ kernelsu-objs += selinux/sepolicy.o
++endif
+ 
+ kernelsu-objs += sulog/event.o
+ kernelsu-objs += sulog/fd.o
+@@ -52,6 +54,15 @@ kernelsu-objs += feature/adb_root.o
+ kernelsu-objs += feature/selinux_hide.o
+ 
+ ifdef KBUILD_EXTMOD
++ifeq ($(CONFIG_KSU_NON_ANDROID),y)
++ccflags-y += -DCONFIG_KSU_NON_ANDROID=1
++endif
++ifeq ($(CONFIG_KSU_SELINUX),y)
++ccflags-y += -DCONFIG_KSU_SELINUX=1
++endif
++ifeq ($(CONFIG_KSU_HANDLE_INPUT_EVENTS),y)
++ccflags-y += -DCONFIG_KSU_HANDLE_INPUT_EVENTS=1
++endif
+ ifeq ($(CONFIG_KSU_DISABLE_MANAGER),y)
+ ccflags-y += -DCONFIG_KSU_DISABLE_MANAGER=1
+ endif
+@@ -72,6 +83,7 @@ else
+ KSU_KERNEL_DIR := $(src)
+ endif
+ 
++ccflags-y += -I$(src) -I$(src)/include
+ ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include
+ 
+ obj-$(CONFIG_KSU) += kernelsu.o
+diff --git a/kernel/Kconfig b/kernel/Kconfig
+index c770166..a710146 100644
+--- a/kernel/Kconfig
++++ b/kernel/Kconfig
+@@ -11,6 +11,14 @@ config KSU
+ 	  To compile as a module, choose M here: the
+ 	  module will be called kernelsu.
+ 
++config KSU_NON_ANDROID
++	bool "KernelSU for non-Android Linux distributions"
++	depends on KSU && KALLSYMS
++	default n
++	help
++	  Enable running KernelSU on non-Android Linux distributions.
++	  Waydroid uses the host kernel, and identifies its init by exec.
++
+ config KSU_DEBUG
+ 	bool "KernelSU debug mode"
+ 	depends on KSU
+diff --git a/kernel/core/init.c b/kernel/core/init.c
+index e6e1b68..a711e09 100644
+--- a/kernel/core/init.c
++++ b/kernel/core/init.c
+@@ -27,7 +27,7 @@
+ #include "feature/selinux_hide.h"
+ #include "infra/symbol_resolver.h"
+ 
+-#if defined(__x86_64__)
++#if defined(__x86_64__) && !defined(CONFIG_KSU_NON_ANDROID)
+ #include <asm/cpufeature.h>
+ #include <linux/version.h>
+ #ifndef X86_FEATURE_INDIRECT_SAFE
+@@ -85,7 +85,7 @@ module_param_named(norc, ksu_no_custom_rc, bool, 0);
+ 
+ int __init kernelsu_init(void)
+ {
+-#if defined(__x86_64__)
++#if defined(__x86_64__) && !defined(CONFIG_KSU_NON_ANDROID)
+     // If the kernel has the hardening patch, X86_FEATURE_INDIRECT_SAFE must be set
+     if (!boot_cpu_has(X86_FEATURE_INDIRECT_SAFE)) {
+         pr_alert("*************************************************************");
+@@ -102,7 +102,11 @@ int __init kernelsu_init(void)
+ #endif
+ 
+ #ifdef MODULE
++    #ifdef CONFIG_KSU_NON_ANDROID
++    ksu_late_loaded = false;
++#else
+     ksu_late_loaded = (current->pid != 1);
++#endif
+ #else
+     ksu_late_loaded = false;
+ #endif
+@@ -161,10 +165,12 @@ int __init kernelsu_init(void)
+         ksu_boot_completed = true;
+         track_throne(false);
+ 
++#ifdef CONFIG_KSU_SELINUX
+         if (!getenforce()) {
+             pr_info("Permissive SELinux, enforcing\n");
+             setenforce(true);
+         }
++#endif
+ 
+     } else {
+         ksu_syscall_hook_manager_init();
+@@ -180,8 +186,17 @@ int __init kernelsu_init(void)
+ 
+ #ifdef MODULE
+ #ifndef CONFIG_KSU_DEBUG
++    /* fops_proxy/workqueues are not safely restorable; stay loaded until reboot. */
+     kobject_del(&THIS_MODULE->mkobj.kobj);
+ #endif
++#endif
++#ifdef MODULE
++#ifdef CONFIG_KSU_NON_ANDROID
++    /* fops_proxy, init.rc hooks, and workqueues are not safely reversible. */
++    /* Pin until reboot; delete_module/rmmod must not unload this module. */
++    if (READ_ONCE(ksu_syscall_hook_manager_ready))
++        __module_get(THIS_MODULE);
++#endif
+ #endif
+     return 0;
+ }
+diff --git a/kernel/feature/adb_root.c b/kernel/feature/adb_root.c
+index c41a995..9c7fa72 100644
+--- a/kernel/feature/adb_root.c
++++ b/kernel/feature/adb_root.c
+@@ -161,6 +161,9 @@ out_release_env_p:
+ 
+ static long do_ksu_adb_root_handle_execve(struct pt_regs *regs)
+ {
++#ifdef CONFIG_KSU_NON_ANDROID
++    return -EOPNOTSUPP;
++#endif
+     if (likely(is_exec_adbd(regs) != 1)) {
+         return 0;
+     }
+diff --git a/kernel/feature/kernel_umount.c b/kernel/feature/kernel_umount.c
+index f914ff8..3f2b022 100644
+--- a/kernel/feature/kernel_umount.c
++++ b/kernel/feature/kernel_umount.c
+@@ -74,6 +74,10 @@ struct umount_tw {
+ 
+ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
+ {
++#ifndef CONFIG_KSU_SELINUX
++    /* Without Android SELinux domains, the zygote safety check is unavailable. */
++    return 0;
++#endif
+     // if there isn't any module mounted, just ignore it!
+     if (!ksu_module_mounted) {
+         return 0;
+diff --git a/kernel/feature/selinux_hide.c b/kernel/feature/selinux_hide.c
+index 5bb59bf..ccfab95 100644
+--- a/kernel/feature/selinux_hide.c
++++ b/kernel/feature/selinux_hide.c
+@@ -1,3 +1,4 @@
++#ifdef CONFIG_KSU_SELINUX
+ #include "selinux_hide.h"
+ #include "infra/symbol_resolver.h"
+ #include "linux/jump_label.h"
+@@ -1133,3 +1134,5 @@ allow:
+     goto out;
+ }
+ #endif
++
++#endif
+diff --git a/kernel/feature/selinux_hide.h b/kernel/feature/selinux_hide.h
+index 5a04371..92c9b14 100644
+--- a/kernel/feature/selinux_hide.h
++++ b/kernel/feature/selinux_hide.h
+@@ -1,3 +1,6 @@
++#ifndef __KSU_SELHIDE
++#define __KSU_SELHIDE
++#ifdef CONFIG_KSU_SELINUX
+ #ifndef __KSU_H_SELINUX_HIDE
+ #define __KSU_H_SELINUX_HIDE
+ 
+@@ -8,3 +11,12 @@ void ksu_selinux_hide_handle_second_stage();
+ void ksu_selinux_hide_handle_post_fs_data();
+ 
+ #endif
++
++#else
++static inline void ksu_selinux_hide_init(void) {}
++static inline void ksu_selinux_hide_exit(void) {}
++static inline void ksu_selinux_hide_drop_backup_if_unused(void) {}
++static inline void ksu_selinux_hide_handle_second_stage(void) {}
++static inline void ksu_selinux_hide_handle_post_fs_data(void) {}
++#endif
++#endif
+diff --git a/kernel/hook/syscall_event_bridge.c b/kernel/hook/syscall_event_bridge.c
+index f866a49..8962fd8 100644
+--- a/kernel/hook/syscall_event_bridge.c
++++ b/kernel/hook/syscall_event_bridge.c
+@@ -16,6 +16,9 @@
+ #include "runtime/ksud.h"
+ #include "sulog/event.h"
+ #include "hook/syscall_hook.h"
++#ifdef CONFIG_KSU_NON_ANDROID
++#include "hook/syscall_hook_manager.h"
++#endif
+ #include "hook/syscall_event_bridge.h"
+ #include "feature/adb_root.h"
+ 
+@@ -74,7 +77,12 @@ long __nocfi ksu_hook_execve(int orig_nr, const struct pt_regs *regs)
+ {
+     const char __user **filename_user = (const char __user **)&PT_REGS_PARM1(regs);
+     const char __user *const __user *argv_user = (const char __user *const __user *)PT_REGS_PARM2(regs);
++#ifdef CONFIG_KSU_NON_ANDROID
++    bool current_is_init = current == READ_ONCE(ksu_android_init_task) &&
++                           READ_ONCE(ksu_android_init_active);
++#else
+     bool current_is_init = is_init(current_cred());
++#endif
+     struct ksu_sulog_pending_event *pending_root_execve = NULL;
+     long ret;
+ 
+diff --git a/kernel/hook/syscall_hook_manager.c b/kernel/hook/syscall_hook_manager.c
+index 26ca600..531632f 100644
+--- a/kernel/hook/syscall_hook_manager.c
++++ b/kernel/hook/syscall_hook_manager.c
+@@ -5,6 +5,9 @@
+ #include <asm/syscall.h>
+ #include <linux/ptrace.h>
+ #include <linux/slab.h>
++#include <linux/sched/task.h>
++#include <linux/sched/signal.h>
++#include <trace/events/sched.h>
+ #include <trace/events/syscalls.h>
+ 
+ #include <linux/version.h>
+@@ -91,7 +94,57 @@ static struct kretprobe *syscall_regfunc_rp = NULL;
+ static struct kretprobe *syscall_unregfunc_rp = NULL;
+ #endif
+ 
++#ifdef CONFIG_KSU_NON_ANDROID
++static DEFINE_SPINLOCK(ksu_init_state_lock);
++bool ksu_android_init_active;
++struct task_struct *ksu_android_init_task;
++bool ksu_syscall_hook_manager_ready;
++static bool ksu_exec_tp_registered;
++static bool ksu_exit_tp_registered;
++
++static void ksu_exec_handler(void *data, struct task_struct *p, pid_t old_pid,
++                             struct linux_binprm *bprm)
++{
++    if (task_pid_vnr(p) != 1 || strcmp(bprm->filename, "/system/bin/init"))
++        return;
++    unsigned long flags;
++    spin_lock_irqsave(&ksu_init_state_lock, flags);
++    if (ksu_android_init_task != p) {
++        if (ksu_android_init_task) {
++            WRITE_ONCE(ksu_android_init_active, false);
++            ksu_clear_task_tracepoint_flag(ksu_android_init_task);
++            put_task_struct(ksu_android_init_task);
++        }
++        get_task_struct(p);
++        WRITE_ONCE(ksu_android_init_task, p);
++    }
++    WRITE_ONCE(ksu_android_init_active, true);
++    ksu_set_task_tracepoint_flag(p);
++    spin_unlock_irqrestore(&ksu_init_state_lock, flags);
++    pr_info("hook_manager: Waydroid init activated (pid %d)\n", task_pid_vnr(p));
++}
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
++static void ksu_exit_handler(void *data, struct task_struct *p, bool group_dead)
++#else
++static void ksu_exit_handler(void *data, struct task_struct *p)
++#endif
++{
++    unsigned long flags;
++    spin_lock_irqsave(&ksu_init_state_lock, flags);
++    if (p == READ_ONCE(ksu_android_init_task)) {
++        WRITE_ONCE(ksu_android_init_active, false);
++        ksu_clear_task_tracepoint_flag(p);
++        WRITE_ONCE(ksu_android_init_task, NULL);
++        put_task_struct(p);
++        pr_info("hook_manager: Waydroid init exited; callbacks remain registered\n");
++    }
++    spin_unlock_irqrestore(&ksu_init_state_lock, flags);
++}
++#endif
++
+ #ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
++static bool ksu_sys_enter_tp_registered;
+ // sys_enter handler: redirect hooked syscalls to the dispatcher
+ static void ksu_sys_enter_handler(void *data, struct pt_regs *regs, long id)
+ {
+@@ -123,6 +176,7 @@ static void ksu_sys_enter_handler(void *data, struct pt_regs *regs, long id)
+ 
+ void __init ksu_syscall_hook_manager_init(void)
+ {
++    WRITE_ONCE(ksu_syscall_hook_manager_ready, false);
+     int ret;
+     pr_info("hook_manager: ksu_hook_manager_init called\n");
+ 
+@@ -137,6 +191,17 @@ void __init ksu_syscall_hook_manager_init(void)
+     ksu_register_syscall_hook(__NR_newfstatat, ksu_hook_newfstatat);
+     ksu_register_syscall_hook(__NR_faccessat, ksu_hook_faccessat);
+ 
++#ifdef CONFIG_KSU_NON_ANDROID
++    ret = register_trace_sched_process_exec(ksu_exec_handler, NULL);
++    if (ret)
++        goto fail_tracepoints;
++    ksu_exec_tp_registered = true;
++    ret = register_trace_sched_process_exit(ksu_exit_handler, NULL);
++    if (ret)
++        goto fail_tracepoints;
++    ksu_exit_tp_registered = true;
++#endif
++
+ #ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
+     ret = register_trace_sys_enter(ksu_sys_enter_handler, NULL);
+ #ifndef CONFIG_KRETPROBES
+@@ -144,22 +209,83 @@ void __init ksu_syscall_hook_manager_init(void)
+ #endif
+     if (ret) {
+         pr_err("hook_manager: failed to register sys_enter tracepoint: %d\n", ret);
++#ifdef CONFIG_KSU_NON_ANDROID
++        goto fail_tracepoints;
++#endif
+     } else {
++        ksu_sys_enter_tp_registered = true;
+         pr_info("hook_manager: sys_enter tracepoint registered\n");
+     }
+ #endif
+ 
+     ksu_setuid_hook_init();
+     ksu_sucompat_init();
++    WRITE_ONCE(ksu_syscall_hook_manager_ready, true);
++    return;
++#ifdef CONFIG_KSU_NON_ANDROID
++fail_tracepoints:
++#ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
++    if (ksu_sys_enter_tp_registered) {
++        unregister_trace_sys_enter(ksu_sys_enter_handler, NULL);
++        ksu_sys_enter_tp_registered = false;
++    }
++#endif
++    if (ksu_exit_tp_registered) {
++        unregister_trace_sched_process_exit(ksu_exit_handler, NULL);
++        ksu_exit_tp_registered = false;
++    }
++    if (ksu_exec_tp_registered) {
++        unregister_trace_sched_process_exec(ksu_exec_handler, NULL);
++        ksu_exec_tp_registered = false;
++    }
++    tracepoint_synchronize_unregister();
++#ifdef CONFIG_KRETPROBES
++    destroy_kretprobe(&syscall_regfunc_rp);
++    destroy_kretprobe(&syscall_unregfunc_rp);
++#endif
++    ksu_unregister_syscall_hook(__NR_setresuid);
++    ksu_unregister_syscall_hook(__NR_execve);
++    ksu_unregister_syscall_hook(__NR_newfstatat);
++    ksu_unregister_syscall_hook(__NR_faccessat);
++#ifndef CONFIG_KRETPROBES
++    ksu_unmark_all_process();
++#endif
++    return;
++#endif
+ }
+ 
+ void __exit ksu_syscall_hook_manager_exit(void)
+ {
++    unsigned long flags;
++    WRITE_ONCE(ksu_syscall_hook_manager_ready, false);
+     pr_info("hook_manager: ksu_hook_manager_exit called\n");
+-#ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
+-    unregister_trace_sys_enter(ksu_sys_enter_handler, NULL);
++#ifdef CONFIG_KSU_NON_ANDROID
++    if (ksu_exit_tp_registered) {
++        unregister_trace_sched_process_exit(ksu_exit_handler, NULL);
++        ksu_exit_tp_registered = false;
++    }
++    if (ksu_exec_tp_registered) {
++        unregister_trace_sched_process_exec(ksu_exec_handler, NULL);
++        ksu_exec_tp_registered = false;
++    }
+     tracepoint_synchronize_unregister();
+-    pr_info("hook_manager: sys_enter tracepoint unregistered\n");
++    spin_lock_irqsave(&ksu_init_state_lock, flags);
++    WRITE_ONCE(ksu_android_init_active, false);
++    if (ksu_android_init_task) {
++        ksu_clear_task_tracepoint_flag(ksu_android_init_task);
++        put_task_struct(ksu_android_init_task);
++        WRITE_ONCE(ksu_android_init_task, NULL);
++    }
++    spin_unlock_irqrestore(&ksu_init_state_lock, flags);
++#endif
++
++#ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
++    if (ksu_sys_enter_tp_registered) {
++        unregister_trace_sys_enter(ksu_sys_enter_handler, NULL);
++        ksu_sys_enter_tp_registered = false;
++        tracepoint_synchronize_unregister();
++        pr_info("hook_manager: sys_enter tracepoint unregistered\n");
++    }
+ #endif
+ 
+ #ifdef CONFIG_KRETPROBES
+diff --git a/kernel/hook/syscall_hook_manager.h b/kernel/hook/syscall_hook_manager.h
+index 47fb055..34f4f9e 100644
+--- a/kernel/hook/syscall_hook_manager.h
++++ b/kernel/hook/syscall_hook_manager.h
+@@ -4,7 +4,13 @@
+ #include <asm/ptrace.h>
+ 
+ // Hook manager initialization and cleanup
+-void ksu_syscall_hook_manager_init(void);
++void __init ksu_syscall_hook_manager_init(void);
+ void ksu_syscall_hook_manager_exit(void);
+ 
+ #endif
++
++#ifdef CONFIG_KSU_NON_ANDROID
++extern bool ksu_android_init_active;
++extern bool ksu_syscall_hook_manager_ready;
++extern struct task_struct *ksu_android_init_task;
++#endif
+diff --git a/kernel/include/ksu.h b/kernel/include/ksu.h
+index 95c9edb..b90b5e2 100644
+--- a/kernel/include/ksu.h
++++ b/kernel/include/ksu.h
+@@ -4,13 +4,18 @@
+ #include <linux/types.h>
+ #include <linux/cred.h>
+ #include <linux/workqueue.h>
++#ifdef CONFIG_KSU_SELINUX
++#include "selinux/sepolicy.h"
++#endif
+ 
+ #define KERNEL_SU_VERSION KSU_VERSION
+ 
+ extern struct cred *ksu_cred;
+ extern bool ksu_late_loaded;
+ extern bool allow_shell;
++#ifdef CONFIG_KSU_SELINUX
+ extern struct selinux_policy *backup_sepolicy;
++#endif
+ extern bool ksu_no_custom_rc;
+ 
+ static inline int startswith(char *s, char *prefix)
+diff --git a/kernel/infra/file_wrapper.c b/kernel/infra/file_wrapper.c
+index 66ea295..33a3c43 100644
+--- a/kernel/infra/file_wrapper.c
++++ b/kernel/infra/file_wrapper.c
+@@ -12,8 +12,11 @@
+ #include <linux/uaccess.h>
+ #include <linux/version.h>
+ #include <linux/mount.h>
++#include <linux/module.h>
+ 
++#ifdef CONFIG_KSU_SELINUX
+ #include "objsec.h"
++#endif
+ 
+ #include "klog.h" // IWYU pragma: keep
+ #include "selinux/selinux.h"
+@@ -523,12 +526,11 @@ int ksu_install_file_wrapper(int fd)
+     struct inode *wrapper_inode = file_inode(wrapper_file);
+     // libc's stdio relies on the fstat() result of the fd to determine its buffer type.
+     wrapper_inode->i_mode = file_inode(orig_file)->i_mode;
++#ifdef CONFIG_KSU_SELINUX
+     struct inode_security_struct *wrapper_sec = selinux_inode(wrapper_inode);
+-    // Use ksu_file_sid to bypass SELinux check.
+-    // When we call `su` from terminal app, this is useful.
+-    if (wrapper_sec) {
++    if (wrapper_sec)
+         wrapper_sec->sid = ksu_file_sid;
+-    }
++#endif
+     // Install open file operation for inode.
+     wrapper_inode->i_fop = &ksu_file_wrapper_inode_fops;
+ 
+diff --git a/kernel/policy/allowlist.c b/kernel/policy/allowlist.c
+index 89e8d08..7b82952 100644
+--- a/kernel/policy/allowlist.c
++++ b/kernel/policy/allowlist.c
+@@ -285,7 +285,11 @@ bool __ksu_is_allow_uid_for_current(uid_t uid)
+ {
+     if (unlikely(uid == 0)) {
+         // already root, but only allow our domain.
++#ifdef CONFIG_KSU_SELINUX
+         return is_ksu_domain();
++#else
++        return true;
++#endif
+     }
+     return __ksu_is_allow_uid(uid);
+ }
+diff --git a/kernel/policy/app_profile.c b/kernel/policy/app_profile.c
+index b85dbf9..dd63df7 100644
+--- a/kernel/policy/app_profile.c
++++ b/kernel/policy/app_profile.c
+@@ -176,7 +176,9 @@ int escape_with_root_profile(void)
+     memcpy(&cred->cap_bset, &profile->capabilities.effective, sizeof(cred->cap_bset));
+ 
+     setup_groups(profile, cred);
++#ifdef CONFIG_KSU_SELINUX
+     setup_selinux(profile->selinux_domain, cred);
++#endif
+ 
+     commit_creds(cred);
+ 
+@@ -209,6 +211,8 @@ void escape_to_root_for_init(void)
+         return;
+     }
+ 
++#ifdef CONFIG_KSU_SELINUX
+     setup_selinux(KERNEL_SU_CONTEXT, cred);
++#endif
+     commit_creds(cred);
+ }
+diff --git a/kernel/runtime/ksud_integration.c b/kernel/runtime/ksud_integration.c
+index 38d1476..0894507 100644
+--- a/kernel/runtime/ksud_integration.c
++++ b/kernel/runtime/ksud_integration.c
+@@ -160,10 +160,12 @@ void ksu_handle_execveat_ksud(const char *path, struct user_arg_ptr *argv)
+         char buf[16];
+         if (!init_second_stage_executed && check_argv(*argv, 1, "second_stage", buf, sizeof(buf))) {
+             pr_info("/system/bin/init second_stage executed\n");
++#ifdef CONFIG_KSU_SELINUX
+             ksu_selinux_hide_handle_second_stage();
+             apply_kernelsu_rules();
+             cache_sid();
+             setup_ksu_cred();
++#endif
+             init_second_stage_executed = true;
+         }
+     }
+@@ -648,6 +650,7 @@ void __init ksu_ksud_init()
+ 
+ void __exit ksu_ksud_exit()
+ {
++    cancel_work_sync(&stop_input_hook_work);
+     // TODO:
+     // this should be done before unregister vfs_read_kp
+     // stop_init_rc_hook();
+diff --git a/kernel/selinux/selinux.h b/kernel/selinux/selinux.h
+index a17ed22..eaafcd5 100644
+--- a/kernel/selinux/selinux.h
++++ b/kernel/selinux/selinux.h
+@@ -1,42 +1,42 @@
+ #ifndef __KSU_H_SELINUX
+ #define __KSU_H_SELINUX
+-
+ #include <linux/types.h>
+-#include <linux/version.h>
+ #include <linux/cred.h>
+-
++#include <linux/errno.h>
++#ifdef CONFIG_KSU_SELINUX
+ #define KERNEL_SU_DOMAIN "ksu"
+ #define KERNEL_SU_FILE "ksu_file"
+-
+ #define KERNEL_SU_CONTEXT "u:r:" KERNEL_SU_DOMAIN ":s0"
+ #define KSU_FILE_CONTEXT "u:object_r:" KERNEL_SU_FILE ":s0"
+ #define ZYGOTE_CONTEXT "u:r:zygote:s0"
+ #define INIT_CONTEXT "u:r:init:s0"
+-
+ void setup_selinux(const char *, struct cred *);
+-
+ void setenforce(bool);
+-
+-bool getenforce();
+-
++bool getenforce(void);
+ void cache_sid(void);
+-
+ bool is_task_ksu_domain(const struct cred *cred);
+-
+-bool is_ksu_domain();
+-
++bool is_ksu_domain(void);
+ bool is_zygote(const struct cred *cred);
+-
+ bool is_init(const struct cred *cred);
+-
+-void apply_kernelsu_rules();
+-
+-int handle_sepolicy(void __user *user_data, u64 data_len);
+-
+-void setup_ksu_cred();
+-
+-void escape_to_root_for_adb_root();
+-
++void apply_kernelsu_rules(void);
++int handle_sepolicy(void __user *, u64);
++void setup_ksu_cred(void);
++void escape_to_root_for_adb_root(void);
+ extern u32 ksu_file_sid;
+-
++#else
++#define KERNEL_SU_DOMAIN "su"
++#define ksu_file_sid 0
++static inline void setup_selinux(const char *domain, struct cred *cred) { }
++static inline void setenforce(bool enforce) { }
++static inline bool getenforce(void) { return true; }
++static inline void cache_sid(void) { }
++static inline bool is_task_ksu_domain(const struct cred *cred) { return false; }
++static inline bool is_ksu_domain(void) { return false; }
++static inline bool is_zygote(const struct cred *cred) { return false; }
++static inline bool is_init(const struct cred *cred) { return false; }
++static inline void apply_kernelsu_rules(void) { }
++static inline int handle_sepolicy(void __user *data, u64 len) { return -EOPNOTSUPP; }
++static inline void setup_ksu_cred(void) { }
++static inline void escape_to_root_for_adb_root(void) { }
++#endif
+ #endif
