@@ -24,10 +24,11 @@
 #    （Qt 5 默认会四舍五入到 1，等于不生效）。这样取值来自屏幕而非写死，
 #    换显示器或改缩放都不用改这里。
 #
-#    注意字重本身改不了：微信把汉仪「WeChat Sans」的 Light 字重打进了 Qt
+#    微信把汉仪「WeChat Sans」的 Light 字重打进了 Qt
 #    资源（二进制里可见 :gui/fonts/WeChatSansSS/WeChatSansSS-Light.ttf），
-#    由 QFontDatabase 从资源加载，fontconfig 无法替换。这里只能让它按正确
-#    尺寸渲染，笔画随之变粗，但无法把 Light 换成 Regular。
+#    由 QFontDatabase 从资源加载，fontconfig 无法全局替换。聊天输入区是 Qt
+#    文本编辑控件，下面用局部 QSS 让它改用系统的 Noto Sans CJK SC Medium；
+#    其他标签、消息和菜单仍使用微信自己的字体。
 #
 # modules/i18n.nix 使用 Wayland 原生输入法前端，有意不设置全局 QT_IM_MODULE
 # 和 GTK_IM_MODULE（避免干扰原生 Wayland 程序），所以这些变量只在这里、
@@ -41,6 +42,7 @@
   runCommand,
   symlinkJoin,
   wechat,
+  writeText,
 }:
 
 let
@@ -48,6 +50,12 @@ let
   gtk3ImmodulesCache = runCommand "fcitx5-gtk3-immodules.cache" { nativeBuildInputs = [ gtk3 ]; } ''
     gtk-query-immodules-3.0 \
       ${fcitx5-gtk}/lib/gtk-3.0/3.0.0/immodules/im-fcitx5.so > "$out"
+  '';
+  wechatInputStyle = writeText "wechat-input-font.qss" ''
+    QTextEdit, QPlainTextEdit {
+      font-family: "Noto Sans CJK SC";
+      font-weight: 500;
+    }
   '';
 in
 symlinkJoin {
@@ -69,6 +77,7 @@ symlinkJoin {
 
     rm "$out/bin/wechat"
     makeWrapper ${lib.getExe wechat} "$out/bin/wechat" \
+      --add-flags "-stylesheet ${wechatInputStyle}" \
       --set-default QT_AUTO_SCREEN_SCALE_FACTOR 1 \
       --set-default QT_SCALE_FACTOR_ROUNDING_POLICY PassThrough \
       --set-default QT_IM_MODULE fcitx \
