@@ -260,10 +260,10 @@ waydroid show-full-ui
 [Waydroid 官方认证说明](https://docs.waydro.id/faq/google-play-certification)。登记只能处理设备认证提示，
 不保证 Play Integrity、DRM、银行或游戏反作弊检查通过。
 
-同一文件当前会构建 supechicken Waydroid 分支的树外 KernelSU 模块，并由
-`waydroid-kernelsu.service` 在每次 `waydroid-container.service` 启动前通过 `modloader` 加载；
-当前运行系统已验证 `kernelsu` 模块处于 loaded 状态。这不是独立 Android 内核：模块运行在宿主
-内核中，并需要修补未导出的内核符号，内核升级后必须重新验证。
+同一文件当前会构建官方 KernelSU v3.2.5 加 Waydroid 适配补丁的树外模块（驱动版本 32525、
+UAPI 2），并由 `waydroid-kernelsu.service` 在每次宿主机启动时通过 `modloader` 加载一次；
+模块包含宿主内核 hook，加载后固定到本次开机结束，替换驱动必须重启宿主机。这不是独立
+Android 内核：模块运行在宿主内核中，并需要修补未导出的内核符号，内核升级后必须重新验证。
 
 Waydroid LXC 当前没有 user namespace，也没有 `lxc.idmap` UID 映射；容器 UID 直接对应宿主 UID，
 容器 root 的影响面覆盖宿主内核。KernelSU 授权因此具有广泛的宿主风险，只应授权可信的普通
