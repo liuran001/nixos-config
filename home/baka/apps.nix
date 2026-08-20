@@ -21,6 +21,7 @@
     bakaPackages.open-orpheus
     bakaPackages.splayer-next
     go-musicfox
+    tsukimi # GTK4 的 Emby 客户端，MPV 播放
     vlc
     obs-studio
 
