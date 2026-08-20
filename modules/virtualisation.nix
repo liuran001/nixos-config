@@ -32,7 +32,7 @@ let
     # fops_proxy/syscall hooks 使模块有意固定为不可卸载；每次宿主机启动只加载一次。
     if ${pkgs.kmod}/bin/lsmod | ${pkgs.gnugrep}/bin/grep -q '^kernelsu '; then
       echo "KernelSU is already loaded; reboot into the new NixOS generation to load the configured driver." >&2
-      exit 1
+      exit 0
     fi
 
     ${pkgs.bakaPackages.modloader}/bin/modloader ${kernelsuKo}
