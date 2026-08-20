@@ -458,6 +458,22 @@ let
     "gpt-5.6-terra"
   ];
 
+  # Anthropic 模型上游只接受 messages 协议；obdo 网关的 /v1/messages 端点
+  # （与 apiBaseUrl 同前缀，接受 Bearer 与 x-api-key 两种鉴权）已为这些模型
+  # 配好渠道，因此按模型覆盖成 @ai-sdk/anthropic。网关日后新增 claude 模型
+  # 时需要在这里补充：opencode 的模型覆盖只认精确 id，没有前缀匹配。
+  obdoMessagesModels = [
+    "claude-fable-5"
+    "claude-opus-4-6"
+    "claude-opus-4-6-thinking"
+    "claude-opus-4-8"
+    "claude-opus-4.6"
+    "claude-opus-4.8"
+    "claude-opus-5"
+    "claude-sonnet-4-6"
+    "claude-sonnet-4.6"
+  ];
+
   opencodeConfig = jsonFormat.generate "opencode.json" {
     model = "obdo/${defaultModel}";
     autoupdate = false;
@@ -497,8 +513,9 @@ let
       # （如 gpt-5.6-sol）配有渠道，gemini 系等模型走 responses 会报
       # 「分组 auto 下模型 X 的可用渠道不存在」。AI SDK v5 的 @ai-sdk/openai
       # 默认走 responses API，所以改用 @ai-sdk/openai-compatible，让所有模型
-      # 统一走 chat/completions；将来若有模型必须 responses，可在
-      # provider.obdo.models.<id>.provider.npm 单独覆盖回 @ai-sdk/openai。
+      # 统一走 chat/completions；将来若有模型必须 responses/messages，可在
+      # provider.obdo.models.<id>.provider.npm 单独覆盖成 @ai-sdk/openai 或
+      # @ai-sdk/anthropic。
       npm = "@ai-sdk/openai-compatible";
       options = {
         baseURL = apiBaseUrl;
@@ -516,12 +533,17 @@ let
           modelInfoFormat = "models.dev";
         };
       };
-      # 见上方 obdoResponsesModels 注释：仅这些模型覆盖回 responses 协议。
-      # 发现插件的 mergeModelOverride 是深合并，这里只写 provider.npm，
-      # 不会丢发现来的 limit/reasoning/modalities 元数据。
-      models = lib.genAttrs obdoResponsesModels (_: {
-        provider.npm = "@ai-sdk/openai";
-      });
+      # 见上方 obdoResponsesModels / obdoMessagesModels 注释：这些模型分别
+      # 覆盖成 responses 与 messages 协议。发现插件的 mergeModelOverride 是
+      # 深合并，这里只写 provider.npm，不会丢发现来的
+      # limit/reasoning/modalities 元数据。
+      models =
+        lib.genAttrs obdoResponsesModels (_: {
+          provider.npm = "@ai-sdk/openai";
+        })
+        // lib.genAttrs obdoMessagesModels (_: {
+          provider.npm = "@ai-sdk/anthropic";
+        });
     };
   };
 
