@@ -29,20 +29,20 @@ let
     # 没加载时这个符号根本不出现在 kallsyms 中，modloader 也就无从修补。
     ${pkgs.kmod}/bin/modprobe ext4
 
-    # 模块只在 Android init 首次 exec 时抓 tracepoint，容器停掉后就自行失效，
-    # 因此每次拉起容器前都重新加载一遍。
+    # fops_proxy/syscall hooks 使模块有意固定为不可卸载；每次宿主机启动只加载一次。
     if ${pkgs.kmod}/bin/lsmod | ${pkgs.gnugrep}/bin/grep -q '^kernelsu '; then
-      ${pkgs.kmod}/bin/rmmod kernelsu
+      echo "KernelSU is already loaded; reboot into the new NixOS generation to load the configured driver." >&2
+      exit 1
     fi
 
     ${pkgs.bakaPackages.modloader}/bin/modloader ${kernelsuKo}
   '';
 
   # 管理器 APK 走官方渠道：内核模块内置的是官方签名哈希，第三方重打包过不了校验。
-  # 32389 是与当前模块（32386）最接近的官方版本。
+  # 32525 是官方 v3.2.5 管理器，匹配 UAPI 2 和打过 Waydroid 补丁的 v3.2.5 驱动。
   kernelsuManagerApk = pkgs.fetchurl {
-    url = "https://github.com/tiann/KernelSU/releases/download/v3.2.0/KernelSU_v3.2.0_32389-release.apk";
-    hash = "sha256-xu/0iY4TWneNVQVPQM1drBOjdI7VCMcyAEVeMwyvII8=";
+    url = "https://github.com/tiann/KernelSU/releases/download/v3.2.5/KernelSU_v3.2.5_32525-release.apk";
+    hash = "sha256-FBcIFBO/erHejkQOy8tiaFA3yPKPBI8Pi3njBbMauRY=";
   };
 
   kernelsuManagerInstall = pkgs.writeShellScriptBin "waydroid-kernelsu-manager" ''
@@ -115,8 +115,8 @@ in
   virtualisation.waydroid.package = waydroidPackage;
 
   # KernelSU：Waydroid 没有独立内核，root 只能装在宿主内核里。这里用的是
-  # supechicken 的 waydroid 分支，编译成外部模块而不是重编内核，风险局限在
-  # 一个随时可以 rmmod 的模块上，但仍然要清楚它的含义：
+  # 官方 v3.2.5 源码加 Waydroid 补丁，编译成外部模块而不是重编内核；
+  # 使用 UAPI 2，且模块包含 fops_proxy/syscall hooks，有意固定为不可卸载，但仍然要清楚它的含义：
   #  - Waydroid 的 LXC 没有 user namespace（config 里没有 lxc.idmap），容器 root
   #    就是宿主 root，只是被 cap.keep 限制。KernelSU 让容器内任意被授权的 App
   #    都能拿到这一级权限。
@@ -157,8 +157,8 @@ in
       };
     };
 
-    # 每次容器启动前重新加载 KernelSU。RemainAfterExit 保持关闭，服务跑完就回到
-    # inactive，下一次 waydroid-container 启动才会再次触发加载。
+    # KernelSU 每次宿主机启动只加载一次。模块不可卸载，RemainAfterExit 保持服务成功状态，
+    # 避免每次 waydroid-container 重启时重新执行加载。
     # 用 requiredBy 而不是 wantedBy：加载失败时宁可容器起不来，也好过 Android
     # 正常启动、管理器却一直显示“未安装”，让人去别处找原因。
     waydroid-kernelsu = {
@@ -168,7 +168,7 @@ in
 
       serviceConfig = {
         Type = "oneshot";
-        RemainAfterExit = false;
+        RemainAfterExit = true;
         ExecStart = loadKernelsu;
       };
     };
