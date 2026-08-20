@@ -9,6 +9,13 @@
     # 工具链自带 GOTOOLCHAIN 机制：go.mod 声明的版本高于此处的 go 时会自动下载
     # 对应版本到 GOPATH，因此不必为个别项目在这里钉死某个 go_1_xx。
     go
+    # C/C++ 基础编译工具链与常用构建辅助；NixOS 默认环境不带 make/gcc，
+    # file/pkg-config 也常被构建脚本假定存在。项目级复杂依赖仍建议用 devShell。
+    gcc
+    gnumake
+    binutils
+    pkg-config
+    file
     # OpenChamber Web CLI 同样在 home/baka/ai.nix 安装，原因见那里的包装器注释。
     ast-grep
     # 命令行音视频转码；核显的 VA-API 栈见 hosts/bakaPC-NixOS/graphics.nix，
