@@ -95,8 +95,12 @@ DeepSeek Harness 单独使用 `deepseek-v4-pro`。Claude Code 与 Kimi Code 不�
 Codex 已启用原生 subagent v2，主代理与子代理默认均为 `gpt-5.6-sol`、
 `ultra` 推理强度。当前还设置了 `approval_policy = "never"` 和
 `sandbox_mode = "danger-full-access"`：Codex 可以在 baka 用户权限范围内直接读写任意路径、
-执行程序和访问网络，并且不会逐次请求确认。不要在不可信仓库或含有未知指令的文件中启动；
-需要收紧时，将其改为 `on-request` 与 `workspace-write` 后重新部署。
+执行程序和访问网络，并且不会逐次请求确认。**不要在不可信仓库或含有未知指令的文件中启动。**
+此外，baka 当前属于 `docker` 组，而这里使用的是 rootful Docker；能访问 Docker socket 的
+AI 或用户代码可以启动特权容器、挂载宿主文件系统，实际取得宿主 root 权限。更安全的做法是
+移除 baka 的 `docker` 组权限，或为 AI 使用独立用户和 rootless 容器运行时，同时把 Codex 改为
+`approval_policy = "on-request"`、`sandbox_mode = "workspace-write"` 后重新部署。以上是建议，
+当前配置并未自动收紧。
 
 API key 与 GitHub token 由 [`agenix`](hosts/bakaPC-NixOS/secrets.nix) 管理。仓库只保存 `.age` 密文，
 激活时以 baka、`0400` 权限解密到：
@@ -122,6 +126,15 @@ agenix -r
 
 编辑完成后正常运行 `nixos-rebuild test` 或 `switch`。不要把编辑器临时文件、解密结果、
 环境变量转储或命令输出提交到 Git。
+
+### 物理丢失与磁盘加密
+
+当前 `/`、`/home` 和 `/nix` 是未加密的 Btrfs 子卷。agenix 能保护 Git 仓库中的 `.age`
+文件，避免仅取得仓库副本的人直接读取秘密；但自动解密所用 SSH 身份位于
+`/home/baka/.ssh/id_ed25519`，因此攻击者拿到关机状态下的整块硬盘后，可以同时读取密文和身份，
+agenix 不能替代全盘加密。应把迁移到 LUKS2 作为一次有计划的重装或数据迁移，而不是在现有根文件
+系统上临时改造；迁移前应准备离线备份和可验证的恢复流程。设备丢失后，即使当时处于关机状态，
+也应撤销并轮换 SSH 身份、API key、GitHub token 及其他可访问凭据。
 
 ### 密钥恢复（YubiKey）
 
@@ -200,17 +213,24 @@ age -R <(nix-instantiate --eval --strict --json -E 'import ./secrets/secrets.nix
 
 安全边界要清楚：当前策略是 `+presence`，只要求物理触摸，不要求 PIN。钥匙插在
 机器上时，任何能碰到键盘的人都能提权和登录——凭据从「知道密码」变成了「物理在场」，
-离开时应当拔下钥匙。若想改成触摸加 PIN，在 `settings` 里加 `pinverification = 1`
-并用 `pamu2fcfg -P` 重新注册。
+离开时应当拔下钥匙。若想改成触摸加 PIN，可以在 `settings` 中启用
+`pinverification = 1` 并用 `pamu2fcfg -P` 重新注册，但当前没有这样配置。
 
-另外，不输密码登录时 KWallet 与 gnome-keyring 拿不到登录密码来解锁，
-会在会话内单独弹窗要密码。
+[`authentication.nix`](hosts/bakaPC-NixOS/authentication.nix) 还为 `login.kwallet` 启用了
+`forceRun`。YubiKey 登录不会向 PAM 提供登录密码，所以当前方案要求把 `kdewallet` 的密码设为空，
+让 PAM session 阶段以空口令解锁，避免登录后再弹 KWallet 密码框。代价是任何以 baka 身份运行的
+本地进程都可以读取钱包数据；结合上面的 Docker 权限，这不能视为强隔离。更安全的替代方案包括
+保留非空钱包密码并在会话中手工解锁、恢复密码登录以便 PAM 传递口令，或把高价值秘密移到独立的
+硬件/凭据存储中；这些替代方案目前均未配置。gnome-keyring 不属于这项空密码 KWallet 方案。
 
 ## Waydroid、GMS 与 KernelSU
 
 [`modules/virtualisation.nix`](modules/virtualisation.nix) 启用了 Waydroid，并让
 `waydroid-gapps-init.service` 在容器首次启动前执行 `waydroid init -s GAPPS`。
-第一次部署需要稳定网络下载较大的 Android GAPPS 镜像，最长等待 30 分钟；可用以下命令观察：
+脚本会同时检查配置、system/vendor 镜像、LXC 配置、基础属性和 rootfs；只有首次或状态不完整时
+才调用 `nm-online --timeout=60`，随后下载 Android GAPPS 镜像。已经完整初始化的启动会直接保留
+现有镜像和用户数据，不调用 `nm-online`，也不等待 `network-online.target`。服务整体初始化超时为
+30 分钟，可用以下命令观察：
 
 ```bash
 systemctl status waydroid-gapps-init.service
@@ -240,10 +260,17 @@ waydroid show-full-ui
 [Waydroid 官方认证说明](https://docs.waydro.id/faq/google-play-certification)。登记只能处理设备认证提示，
 不保证 Play Integrity、DRM、银行或游戏反作弊检查通过。
 
-KernelSU 当前未启用。Waydroid 共享宿主 NixOS 内核，并没有可单独替换的 Android 内核；
-启用 KernelSU 必须给宿主内核加入实验性 root 补丁，会扩大整台主机的攻击面，且当前
-x86_64/新内核组合存在兼容性与稳定性风险。本仓库不会把未经验证的宿主内核补丁标注成
-“KernelSU 支持”；如需实验，应使用可回退的独立测试内核或虚拟机。
+同一文件当前会构建 supechicken Waydroid 分支的树外 KernelSU 模块，并由
+`waydroid-kernelsu.service` 在每次 `waydroid-container.service` 启动前通过 `modloader` 加载；
+当前运行系统已验证 `kernelsu` 模块处于 loaded 状态。这不是独立 Android 内核：模块运行在宿主
+内核中，并需要修补未导出的内核符号，内核升级后必须重新验证。
+
+Waydroid LXC 当前没有 user namespace，也没有 `lxc.idmap` UID 映射；容器 UID 直接对应宿主 UID，
+容器 root 的影响面覆盖宿主内核。KernelSU 授权因此具有广泛的宿主风险，只应授权可信的普通
+Android 应用，绝不能授权 system UID 或来源不明的应用。要禁用它，必须在
+[`modules/virtualisation.nix`](modules/virtualisation.nix) 中移除 KernelSU 外部模块构建、加载脚本和
+`waydroid-kernelsu` 与容器之间的 systemd wiring，再重建并重启；只改 README、卸载管理器 APK，
+或在界面中不授权应用，都不会停止宿主模块的加载。
 
 ## 显卡与电源
 
@@ -251,9 +278,12 @@ x86_64/新内核组合存在兼容性与稳定性风险。本仓库不会把未�
 需要独显的程序用 `nvidia-offload` 启动。两侧各自负责：
 
 - [`graphics.nix`](hosts/bakaPC-NixOS/graphics.nix) 提供核显的 VA-API 栈
-  （`intel-media-driver`、`vpl-gpu-rt`），并把 `LIBVA_DRIVER_NAME` 固定为 `iHD`。
+  （`intel-media-driver`、`vpl-gpu-rt`）；驱动保留在 `hardware.graphics.extraPackages`，
+  诊断工具 `libva-utils` 则安装在 `environment.systemPackages`，并把
+  `LIBVA_DRIVER_NAME` 固定为 `iHD`。
   少了它浏览器和播放器只能软解视频，CPU 占用与耗电明显升高。
-  用 `vainfo` 确认能列出 H.264/HEVC/AV1 的 profile。
+  部署后先用 `command -v vainfo` 确认工具在 PATH，再运行 `vainfo` 检查能否列出
+  H.264/HEVC/AV1 profile。
 - [`nvidia.nix`](hosts/bakaPC-NixOS/nvidia.nix) 除挂起/唤醒电源管理外还开启了
   `powerManagement.finegrained`，独显空闲时整卡进入 D3cold。
   用 `cat /sys/bus/pci/devices/0000:02:00.0/power/runtime_status` 检查，
@@ -317,9 +347,15 @@ Plasma 默认的 Spectacle 已替换为带 Tesseract OCR 的构建，支持英�
 其余三类 deny 分支（`bytedance://` 协议、跳外部浏览器、主窗口内加载）保持原样，
 并在构建期前后各校验一次，上游改版导致补丁失效时构建会直接失败。
 
-注意上游给弹窗设的 `webPreferences` 是 `nodeIntegration: true`、
-`contextIsolation: false`、`webSecurity: false`，与主窗口同样宽松；
-放开弹窗等于把这套设置也应用到弹出的页面上。
+当前打包阶段已完成第一阶段兼容性加固：主窗口和弹窗均启用 `webSecurity`，关闭 worker 与
+subframe 的 Node 集成，并把顶层导航、重定向和弹窗限制为 HTTPS 的 `douyin.com` 主域或子域；
+构建期断言会在上游源码结构或这些安全设置发生变化时直接失败。
+
+这仍不是完整 Electron 隔离。上游注入脚本通过 renderer 中的 `require('electron')` 直接使用
+`ipcRenderer`，因此当前仍需保留 `nodeIntegration = true` 和 `contextIsolation = false`，也不能兼容
+`sandbox = true`。彻底加固需要把窗口控制 IPC 迁移到最小权限的 preload/contextBridge 后，再关闭
+renderer Node 集成、启用 context isolation 和 Chromium sandbox。该客户端仍是非官方软件，固定 hash
+只保证下载内容可复现，不代表来源可信。
 
 ## G-Helper
 

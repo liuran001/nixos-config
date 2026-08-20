@@ -36,14 +36,26 @@ let
   # nix-bun upstream still reads the deprecated stdenv.isLinux/isDarwin aliases.
   # Supply plain boolean compatibility fields locally so evaluation stays quiet
   # without mutating nixpkgs globally or forking the upstream package.
-  ompStdenv = pkgs.stdenv // {
-    inherit (pkgs.stdenv.hostPlatform) isDarwin isLinux;
+  ompSystem = pkgs.stdenv.hostPlatform.system;
+  ompCompatOverlay = _final: previous: {
+    stdenv = previous.stdenv // {
+      inherit (previous.stdenv.hostPlatform) isDarwin isLinux;
+    };
   };
-  ompBun = omp.inputs.nix-bun.packages.${pkgs.stdenv.hostPlatform.system}.bun.override {
-    stdenv = ompStdenv;
+  ompPkgs = import omp.inputs.nixpkgs {
+    system = ompSystem;
+    overlays = [
+      omp.inputs.rust-overlay.overlays.default
+      ompCompatOverlay
+    ];
   };
-  ompPackage = omp.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
+  ompBun = omp.inputs.nix-bun.packages.${ompSystem}.bun.override {
+    stdenv = ompPkgs.stdenv;
+  };
+  ompRustToolchain = ompPkgs.rust-bin.fromRustupToolchainFile (omp.outPath + "/rust-toolchain.toml");
+  ompPackage = omp.packages.${ompSystem}.default.override {
     bun = ompBun;
+    rustToolchain = ompRustToolchain;
   };
   ohMyOpenCodeSlimRoot = "${aiTools}/lib/node_modules/nixos-ai-tools/node_modules/oh-my-opencode-slim";
   ohMyOpenCodeSlimPlugin = "file://${ohMyOpenCodeSlimRoot}";

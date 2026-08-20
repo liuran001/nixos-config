@@ -10,7 +10,11 @@
   hardware.graphics.extraPackages = with pkgs; [
     intel-media-driver # iHD：Broadwell 以后的 VA-API 解码与编码
     vpl-gpu-rt # oneVPL 运行时，供 Quick Sync 编码使用
-    libva-utils # 提供 vainfo，用于确认 profile 是否真的可用
+  ];
+
+  # vainfo 是诊断工具，不是 VA-API 驱动；安装到 PATH 方便确认 profile 是否真的可用。
+  environment.systemPackages = with pkgs; [
+    libva-utils
   ];
 
   # 32 位程序（Steam 内的旧游戏、Wine）也走核显解码。

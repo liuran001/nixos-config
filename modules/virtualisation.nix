@@ -86,6 +86,10 @@ let
       exit 0
     fi
 
+    # 只有首次初始化才需要网络；已完成初始化时上面的检查会直接返回。
+    # nm-online 自身有有限超时，失败时由 set -e 让服务快速失败。
+    ${pkgs.networkmanager}/bin/nm-online --quiet --timeout=60
+
     echo "Initializing Waydroid with the GAPPS image."
     ${waydroidPackage}/bin/waydroid init -s GAPPS
   '';
@@ -128,8 +132,6 @@ in
   systemd.services = {
     waydroid-gapps-init = {
       description = "Initialize Waydroid with GAPPS image";
-      wants = [ "network-online.target" ];
-      after = [ "network-online.target" ];
       before = [ "waydroid-container.service" ];
 
       serviceConfig = {
