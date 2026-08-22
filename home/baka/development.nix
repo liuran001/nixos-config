@@ -2,10 +2,21 @@
 { pkgs, ... }:
 
 {
+  home.sessionVariables = {
+    # 统一复用 nixpkgs 已封装的浏览器，禁止 Playwright 首次运行另行下载。
+    PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+  };
+
   home.packages = with pkgs; [
-    # 显式包含 pip；项目依赖仍应安装到 venv，而不是写入只读的 Nix store。
-    (python3.withPackages (pythonPackages: [ pythonPackages.pip ]))
+    # 显式包含 pip 与 Python Playwright；项目依赖仍应安装到 venv，
+    # 而不是写入只读的 Nix store。浏览器路径由上面的会话变量统一指定。
+    (python3.withPackages (pythonPackages: [
+      pythonPackages.pip
+      pythonPackages.playwright
+    ]))
     nodejs
+    bakaPackages.camoufox
     # 工具链自带 GOTOOLCHAIN 机制：go.mod 声明的版本高于此处的 go 时会自动下载
     # 对应版本到 GOPATH，因此不必为个别项目在这里钉死某个 go_1_xx。
     go

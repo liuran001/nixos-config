@@ -1,6 +1,7 @@
 {
   appimageTools,
   fetchurl,
+  imagemagick,
   lib,
   makeWrapper,
 }:
@@ -21,7 +22,10 @@ in
 appimageTools.wrapType2 {
   inherit pname version src;
 
-  nativeBuildInputs = [ makeWrapper ];
+  nativeBuildInputs = [
+    imagemagick
+    makeWrapper
+  ];
 
   extraInstallCommands = ''
     wrapProgram "$out/bin/${pname}" \
@@ -33,6 +37,13 @@ appimageTools.wrapType2 {
       --replace-fail 'Exec=AppRun --no-sandbox %U' 'Exec=openchamber-desktop %U'
     install -Dm444 "${appimageContents}/usr/share/icons/hicolor/1024x1024/apps/openchamber.png" \
       "$out/share/icons/hicolor/1024x1024/apps/openchamber.png"
+    for size in 16 24 32 48 64 128 256 512; do
+      mkdir -p "$out/share/icons/hicolor/''${size}x''${size}/apps"
+      magick \
+        "${appimageContents}/usr/share/icons/hicolor/1024x1024/apps/openchamber.png" \
+        -resize "''${size}x''${size}" \
+        "$out/share/icons/hicolor/''${size}x''${size}/apps/openchamber.png"
+    done
   '';
 
   meta = {

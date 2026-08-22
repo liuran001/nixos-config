@@ -15,6 +15,7 @@
     rustdesk-flutter
     termius
     claude-desktop
+    bakaPackages.zcode
 
     # 影音、音乐与直播。
     bakaPackages.bilibili
@@ -31,6 +32,7 @@
 
     # 桌面工具和外观。
     bakaPackages.keyguard
+    bakaPackages.cc-switch
     fastfetch
     kdePackages.filelight
     kdePackages.kate
@@ -44,7 +46,7 @@
     bakaPackages.ksystemlog # 去掉 X-KDE-SubstituteUID，否则 Plasma 菜单点击无反应
     # partitionmanager 不在这里装：见 modules/desktop.nix 的
     # programs.partition-manager.enable，它同时提供提权所需的 polkit 与 D-Bus 配置。
-    microsoft-edge
+    bakaPackages.microsoft-edge-outlook # 仅修正 Outlook 中文错误回退到宋体的问题
     bakaPackages.motrix
     # OpenChamber 桌面版在 home/baka/ai.nix 安装：它 fork 的 opencode 需要
     # agenix 密钥，只能走那里的包装器，直接装原包会拿不到模型和 MCP 认证。

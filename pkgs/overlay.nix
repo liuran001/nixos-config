@@ -12,6 +12,8 @@ _final: prev: {
   bakaPackages = {
     ai-tools = prev.callPackage ./ai-tools.nix { };
     bilibili = prev.callPackage ./bilibili.nix { };
+    camoufox = prev.callPackage ./camoufox.nix { };
+    cc-switch = prev.callPackage ./cc-switch.nix { };
     douyin = prev.callPackage ./douyin.nix { };
     keyguard = prev.callPackage ./keyguard.nix { };
     kimi-code = prev.callPackage ./kimi-code.nix { };
@@ -20,6 +22,7 @@ _final: prev: {
     # 去掉上游 .desktop 的 X-KDE-SubstituteUID，否则 Plasma 菜单点击无反应。
     ksystemlog = prev.callPackage ./ksystemlog.nix { };
     lark = prev.callPackage ./lark.nix { };
+    microsoft-edge-outlook = prev.callPackage ./microsoft-edge-outlook.nix { };
     # KernelSU 模块本身要按内核版本编译，只能在 modules/virtualisation.nix 里
     # 用 boot.kernelPackages.callPackage；加载器不依赖内核，放在这里方便单独构建。
     modloader = prev.callPackage ./modloader.nix { };
@@ -37,6 +40,7 @@ _final: prev: {
     splayer-next = prev.callPackage ./splayer-next.nix { };
     # 在 nixpkgs 的微信之上补输入法环境变量，不改动上游包本身。
     wechat = prev.callPackage ./wechat.nix { };
+    zcode = prev.callPackage ./zcode.nix { };
     # 同理，给 WPS 补上 QT_IM_MODULE，让它用上自带的 fcitx 插件。
     wpsoffice = prev.callPackage ./wpsoffice.nix { };
     # 从同一份 deb 里取出被 nixpkgs 删掉的自带字体，由 modules/fonts.nix 安装。
