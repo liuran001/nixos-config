@@ -51,5 +51,6 @@
     # OpenChamber 桌面版在 home/baka/ai.nix 安装：它 fork 的 opencode 需要
     # agenix 密钥，只能走那里的包装器，直接装原包会拿不到模型和 MCP 认证。
     bakaPackages.pjsk-cursor-theme
+    bakaPackages.waywallen # 动态壁纸（官方 AppImage 封装）
   ];
 }

@@ -6,6 +6,7 @@
     ./development.nix
     ./kde.nix
     ./shell.nix
+    ./waywallen.nix
     ./xdg.nix
   ];
 

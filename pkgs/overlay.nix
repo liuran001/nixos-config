@@ -34,6 +34,7 @@ _final: prev: {
     open-orpheus = prev.callPackage ./open-orpheus.nix { };
     openchamber-desktop = prev.callPackage ./openchamber/desktop.nix { };
     openchamber-web = prev.callPackage ./openchamber/web.nix { };
+    open-wallpaper-engine = prev.callPackage ./open-wallpaper-engine.nix { };
     opencode-claude-auth = prev.callPackage ./opencode-claude-auth.nix { };
     opencode-models-discovery = prev.callPackage ./opencode-models-discovery.nix { };
     pjsk-cursor-theme = prev.callPackage ./pjsk-cursor-theme.nix { };
@@ -42,6 +43,7 @@ _final: prev: {
     wechat = prev.callPackage ./wechat.nix { };
     zcode = prev.callPackage ./zcode.nix { };
     # 同理，给 WPS 补上 QT_IM_MODULE，让它用上自带的 fcitx 插件。
+    waywallen = prev.callPackage ./waywallen.nix { };
     wpsoffice = prev.callPackage ./wpsoffice.nix { };
     # 从同一份 deb 里取出被 nixpkgs 删掉的自带字体，由 modules/fonts.nix 安装。
     wps-office-fonts = prev.callPackage ./wps-office-fonts.nix { };
