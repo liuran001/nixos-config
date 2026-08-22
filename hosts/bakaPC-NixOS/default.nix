@@ -51,4 +51,11 @@
       omp.homeManagerModules.default
     ];
   };
+
+  services.gaze = {
+    enable = true;
+    gui.enable = true;
+    # 第一阶段不把 Gaze 注入任何 PAM 服务。
+    pam.defaultServices = [ ];
+  };
 }

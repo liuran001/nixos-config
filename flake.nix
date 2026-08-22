@@ -52,6 +52,12 @@
       url = "github:can1357/oh-my-pi";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Gaze 本地人脸认证服务；复用主系统的 nixos-unstable。
+    gaze = {
+      url = "github:GunduLabs/gaze";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -64,6 +70,7 @@
       g-helper-linux,
       oh-my-claudecode,
       omp,
+      gaze,
       ...
     }:
     let
@@ -105,6 +112,7 @@
             ];
           }
           ./hosts/bakaPC-NixOS
+          gaze.nixosModules.default
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
           { environment.systemPackages = [ agenix.packages.${system}.default ]; }

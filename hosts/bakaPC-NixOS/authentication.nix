@@ -3,7 +3,43 @@
 # 凭据由 pamu2fcfg 在本机注册，策略为 +presence：只要求物理触摸，不要求
 # FIDO2 PIN。这意味着钥匙插在机器上时，任何能碰到键盘的人都能提权和登录——
 # 相当于把凭据从「知道密码」换成了「物理在场」。离开时应拔下钥匙。
-{ config, ... }:
+{ config, pkgs, ... }:
+
+let
+  sudoYubikeyNotification = pkgs.writeShellScript "sudo-yubikey-notification" ''
+    # pam_exec runs this as root; all notification failures are intentionally ignored.
+    if [ "''${PAM_TYPE:-}" != auth ]; then
+      exit 0
+    fi
+
+    requester="''${PAM_RUSER:-}"
+    if [ -z "$requester" ] || [ "$requester" = root ]; then
+      requester="''${SUDO_USER:-}"
+    fi
+    if [ -z "$requester" ] || [ "$requester" = root ]; then
+      exit 0
+    fi
+
+    uid="$(${pkgs.coreutils}/bin/id -u -- "$requester" 2>/dev/null)" || exit 0
+    case "$uid" in
+      *[!0-9]*) exit 0 ;;
+    esac
+
+    runtime_dir="/run/user/$uid"
+    bus="$runtime_dir/bus"
+    [ -S "$bus" ] || exit 0
+
+    ${pkgs.util-linux}/bin/runuser --user "$requester" -- \
+      ${pkgs.coreutils}/bin/env \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=$bus" \
+        XDG_RUNTIME_DIR="$runtime_dir" \
+        ${pkgs.libnotify}/bin/notify-send -t 5000 \
+          "sudo：请触摸 YubiKey" "sudo 正在等待 YubiKey 验证" \
+      >/dev/null 2>&1 || true
+
+    exit 0
+  '';
+in
 
 {
   security.pam.u2f = {
@@ -32,6 +68,17 @@
     passwd.u2f.enable = false;
     chpasswd.u2f.enable = false;
     chsh.u2f.enable = false;
+
+    sudo.rules.auth.sudo-yubikey-notification = {
+      # 在内置 u2f 规则前提示用户；optional 不影响认证结果。
+      order = config.security.pam.services.sudo.rules.auth.u2f.order - 10;
+      control = "optional";
+      modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
+      args = [
+        "quiet"
+        "${sudoYubikeyNotification}"
+      ];
+    };
 
     # KWallet 免弹窗解锁。pam_kwallet5 默认在 auth 阶段截获登录密码、
     # session 阶段用它解锁 kdewallet；u2f 登录不经过密码（sufficient
